@@ -12,18 +12,15 @@
 | D6 | Encoding vs. app quirks | Strictly per NMEA 2000 spec |
 | D7 | Web UI access | `127.0.0.1` by default, `--ui-host` flag to open it up |
 | D8 | v1 scope | Core only; waypoints, 0183 output, headless mode, time acceleration deferred |
-
-## Assumptions to confirm
-
-| # | Assumption | Alternative |
-|---|---|---|
-| A1 | "VSOP" = VDOP; also send PDOP/TDOP | something else? |
-| A2 | Compass reports **magnetic** heading + variation | true heading |
-| A5 | Several virtual devices with own source addresses | single source like a simple gateway |
-| A6 | Real-time only; no time acceleration | add 2×/5×/10× time scale |
-| A8 | Depth: slow random walk 12–35 m | fixed default |
-| A9 | Engine data sent only while RPM > 0 | always sent |
-| A10 | No leeway, no sensor noise | optional noise/leeway later |
+| D9 | GNSS data | VDOP plus all usual GPS data (fix, satellites, DOPs, altitude, time) |
+| D10 | Compass | Industry-standard fluxgate: magnetic heading, variation from GPS |
+| D11 | Network | Single gateway source, modular sensors in code |
+| D12 | Time | Real time only |
+| D13 | Depth | Slow random walk 12–35 m |
+| D14 | Engine | Data only while RPM > 0 |
+| D15 | Noise / leeway | No noise; leeway modelled in the boat tier |
+| D16 | Pipeline | Three tiers: environment → boat → sensors |
+| D17 | Mock polar | 40 ft cruiser |
 
 ## Deferred (after v1)
 
@@ -32,6 +29,4 @@ time acceleration. The architecture keeps seams for each.
 
 ## Open
 
-| # | Question |
-|---|---|
-| Q4 | Which yacht should the mock polar resemble (size/type)? Default: 40 ft cruiser. |
+None at the moment.

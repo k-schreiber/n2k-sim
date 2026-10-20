@@ -14,6 +14,7 @@
 ## Non-goals
 
 - Physically accurate hydrodynamics or aerodynamics; sensor noise, latency, calibration errors.
+- A realistic multi-device N2K network (one gateway source instead).
 - Writing to a real CAN bus (no CAN adapter support — avoids disturbing a real boat network).
 - Receiving or acting on N2K input (the TCP server ignores anything clients send).
 - AIS targets, autopilot commands, alarms, multi-boat scenarios (possible later extensions).
@@ -22,21 +23,24 @@
 ## Functional requirements
 
 ### FR-1 Simulation core
+- FR-1.0 Three tiers, each depending only on the one above: (1) lean **environment** simulation,
+  (2) very lean **boat** simulation, (3) noise-free **sensors**. See [architecture.md](architecture.md).
 - FR-1.1 Fixed-step simulation tick (default 10 Hz) in real time; pause / resume; reset to scenario.
 - FR-1.2 Environment: wind (TWD, TWS, oscillation, gusts), current (set, drift), waves (direction,
   height, wavelength). See [simulation.md](simulation.md).
-- FR-1.3 Vessel: position, heading, STW from polar, heel from lookup, attitude from waves,
-  rudder and rate of turn from the autopilot, engine for motoring.
+- FR-1.3 Boat: position, heading, STW from polar, heel from lookup, **leeway** from heel and STW,
+  attitude from waves, rudder and rate of turn from the autopilot, engine for motoring.
 - FR-1.4 Autopilot modes: `heading` (hold compass course), `twa` (hold true wind angle, tacks or
   gybes when the target changes sign), `motor` (hold heading, speed from engine RPM).
 - FR-1.5 Every environment parameter can be **fixed** (oscillation/gusts disabled) from the UI.
 
 ### FR-2 Sensors, calculations, static data
 - FR-2.1 Sensors are pure functions of the simulation state (no errors), producing the "raw" values
-  devices on the bus would report: AWA, AWS, heading, variation, ROT, attitude, rudder, STW, depth,
-  water temperature, position, COG, SOG, GNSS time and DOPs, log/trip.
-- FR-2.2 Calculated values derived **only from sensor values** (as instruments do): TWA, TWS, TWD,
-  set & drift, VMG, dew point.
+  devices on the bus would report: AWA, AWS, magnetic heading (fluxgate), ROT, attitude, rudder,
+  STW, depth, water temperature, log/trip, and the usual GNSS data (position, altitude, COG, SOG,
+  date/time, variation, fix type, satellites used/in view, HDOP/VDOP/PDOP/TDOP).
+- FR-2.2 Calculated values derived **only from sensor values** (as instruments do): true heading, leeway
+  (with editable correction factor), TWA, TWS, TWD, set & drift, VMG, dew point.
 - FR-2.3 Static values set in the UI: air temperature, pressure, humidity, engine (RPM, oil
   pressure, coolant temp, alternator voltage, hours), tanks (fuel, fresh water, black water),
   batteries (voltage, current, temperature), depth transducer offset, magnetic variation.
@@ -47,9 +51,10 @@
 
 ### FR-3 N2K output
 - FR-3.1 Encode the PGNs in [n2k-output.md](n2k-output.md) at realistic per-PGN intervals.
-- FR-3.2 Fast-packet framing for PGNs longer than 8 bytes; correct sequence counters per source.
-- FR-3.3 Several **virtual devices** with own source addresses; ISO address claim (PGN 60928) at
-  start and on request-free periodic schedule.
+- FR-3.2 Fast-packet framing for PGNs longer than 8 bytes; correct sequence counters per PGN.
+- FR-3.3 All PGNs are emitted by a single **gateway** source address with one ISO address claim
+  (PGN 60928) at start and periodically. No simulated multi-device network; sensor modules stay
+  separate in code so per-device addresses remain possible later.
 - FR-3.4 YD RAW lines `hh:mm:ss.mmm R XXXXXXXX b0 b1 … b7\r\n`.
 - FR-3.5 UDP broadcast (default port 2002, configurable target address incl. unicast) and TCP
   server (default port 2223, multiple clients). Each transport can be enabled independently.
@@ -60,7 +65,7 @@
 - FR-4.1 Live dashboard with a classic **wind gauge** (AWA/TWA needles, AWS/TWS readouts), heading,
   SOG/COG, STW, depth, heel.
 - FR-4.2 Environment configuration (wind, current, waves) with auto/fixed switches.
-- FR-4.3 Vessel & autopilot control, polar file selection/upload.
+- FR-4.3 Boat & autopilot control, polar file selection/upload.
 - FR-4.4 Static data editor.
 - FR-4.5 Signal table: every signal with current value, unit, source layer, override toggle.
 - FR-4.6 Output monitor: transport status, client count, frames/s per PGN, tail of the YD RAW stream.
@@ -79,11 +84,11 @@
 
 ## Assumptions (educated guesses)
 
-- "VSOP" in the request means **VDOP** (vertical dilution of precision); PDOP is sent as well.
-- Heading is reported **magnetic** by the compass with variation in PGN 127258 (as most fluxgate
-  compasses do); a setting switches to true heading.
+- "VSOP" means **VDOP**; the GPS reports all usual GNSS data (see signals.md). *(confirmed)*
+- Heading comes from an industry-standard **fluxgate** compass: magnetic heading only; variation
+  from the GPS in PGN 127258. *(confirmed)*
 - Wind is defined **over ground** in the environment. Instruments calculate "true wind" from
-  apparent wind, STW and heading (water-referenced), so with current present calculated TWS/TWD
-  differ slightly from the environment — this is realistic and intentional.
-- Leeway is ignored (heading = course through water).
+  apparent wind, STW, heading and leeway (water-referenced), so with current present calculated
+  TWS/TWD differ from the ground wind — realistic and intentional.
+- Leeway is modelled in tier 2 (`λ = K·heel/STW²`); no sensor noise. *(confirmed)*
 - Default start position: off Split, Croatia (43.48 N, 16.40 E) — editable.

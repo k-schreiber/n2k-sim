@@ -1,48 +1,52 @@
 # Architecture
 
-## Layered pipeline
+## Three simulation tiers + processing + output
 
-Each tick flows strictly downwards. Every layer reads only the snapshot produced by the layer above
-and is a **pure function** where possible, so it can be tested without timers or sockets.
+The simulation is split into **three tiers**, each lean and each depending only on the tier
+above. Everything after tier 3 is "the boat's electronics": instrument calculations, the gateway
+and the network output. Each tick flows strictly downwards; tiers 1–2 are stateful models stepped
+by `dt`, tier 3 and everything below are **pure functions** of their inputs, testable without
+timers or sockets.
 
 ```
-┌───────────────┐  scenario + UI commands
-│   control     │──────────────────────────────────────────────────────────┐
-└──────┬────────┘                                                          │
-       ▼                                                                   │
-┌───────────────┐  EnvironmentState (truth: wind over ground, current, waves, time)
-│ environment   │  wind.py · current.py · waves.py
-└──────┬────────┘
-       ▼
-┌───────────────┐  VesselState (truth: position, heading, STW, velocity over ground,
-│   vessel      │  heel, roll/pitch, rudder, ROT, engine)   polar.py · heel.py ·
-└──────┬────────┘  autopilot.py · motion.py · attitude.py
-       ▼
-┌───────────────┐  SensorReadings (what devices measure: AWA/AWS, HDG, STW, SOG/COG, …)
-│   sensors     │  pure functions of (Environment, Vessel, StaticData)
-└──────┬────────┘
-       ▼
-┌───────────────┐  CalculatedValues (TWA/TWS/TWD, set & drift, VMG, dew point)
-│ calculations  │  only from SensorReadings, like an instrument processor
-└──────┬────────┘
-       ▼        ◄── ALL overrides applied here, after calculation (transmit-only semantics)
-┌───────────────┐  SignalSnapshot: flat dict name → value (SI) + metadata
-│   signals     │  registry.py (catalogue in signals.md), overrides.py
-└──────┬────────┘
-       ├──────────────► web (WebSocket push, ~4 Hz)
-       ▼
-┌───────────────┐  per-PGN schedulers pick latest snapshot at their own interval
-│   n2k         │  devices.py · pgns/*.py (encoders) · fastpacket.py · canid.py
-└──────┬────────┘
-       ▼  CanFrame(id, data, timestamp)
-┌───────────────┐
-│   formats     │  ydraw.py  (seam for actisense.py, seasmart.py, nmea0183 later)
-└──────┬────────┘
-       ▼  bytes
-┌───────────────┐
-│  transport    │  udp.py (broadcast/unicast, batching) · tcp.py (server, N clients) ·
-└───────────────┘  recorder.py (file)
+ scenario + UI commands ──► config (read by every tier at the start of a tick)
+
+ ═══ TIER 1 · ENVIRONMENT (lean) ══════════════════════════════════════════════════
+   EnvironmentState: wind over ground (TWD/TWS with oscillation & gusts), current,
+   waves, depth under the boat, meteo            environment/ wind · current · waves · seabed
+ ═══ TIER 2 · BOAT (very lean) ════════════════════════════════════════════════════
+   BoatState: position, heading, course through water, STW, leeway, heel,
+   roll/pitch/yaw, rudder, ROT, engine            boat/ polar · heel · leeway · autopilot ·
+                                                        motion · attitude · engine
+ ═══ TIER 3 · SENSORS (no noise) ══════════════════════════════════════════════════
+   SensorReadings: what each device measures     sensors/ one module per device type:
+   (pure functions of Environment + Boat +       gps · compass · wind_sensor · speed_log ·
+    StaticData)                                   depth_sounder · rudder · engine · tanks ·
+                                                  battery · weather
+ ══════════════════════════════════════════════════════════════════════════════════
+   ▼
+ calc/         CalculatedValues: TWA/TWS/TWD, set & drift, VMG, dew point —
+               only from SensorReadings, like an instrument processor
+   ▼  ◄── overrides applied here (transmit-only: calculations above never see them)
+ signals/      SignalSnapshot: flat dict name → value (SI) + metadata ─────► web/ (4 Hz push)
+   ▼
+ n2k/          gateway: per-PGN scheduler → encoders (pgns/*) → fast-packet → CAN frames,
+               one source address (see n2k-output.md)
+   ▼  CanFrame(id, data, timestamp)
+ formats/      ydraw.py   (seam: actisense, seasmart, nmea0183)
+   ▼  bytes
+ transport/    udp.py · tcp.py · recorder.py
 ```
+
+Why three tiers: the environment knows nothing about the boat, the boat knows nothing about
+instruments, and sensors only *observe* — so e.g. adding leeway (tier 2) automatically changes
+what the GPS reports (tier 3) and therefore what the instrument processor calculates, without any
+special-casing.
+
+**Device modularity without a simulated network:** each sensor module declares the signals it
+produces and the PGNs that carry them (`DeviceSpec`). The gateway collects all enabled devices and
+emits their PGNs from **one source address**, like a simple gateway or multiplexer would. Giving
+devices their own addresses later only touches `n2k/gateway.py`.
 
 ## Package layout
 
@@ -61,12 +65,14 @@ n2k-sim/
 │   ├── clock.py                        sim time, pause, deterministic seed
 │   ├── units.py                        conversions (kn↔m/s, deg↔rad, °C↔K, …)
 │   ├── geo.py                          angle wrap, vector add, great-circle step
-│   ├── environment/  wind.py current.py waves.py state.py
-│   ├── vessel/       polar.py heel.py autopilot.py motion.py attitude.py engine.py state.py
-│   ├── sensors/      readings.py (one function per device family)
+│   ├── environment/  wind.py current.py waves.py seabed.py state.py        (tier 1)
+│   ├── boat/         polar.py heel.py leeway.py autopilot.py motion.py
+│   │                 attitude.py engine.py state.py                        (tier 2)
+│   ├── sensors/      base.py (DeviceSpec) gps.py compass.py wind_sensor.py speed_log.py
+│   │                 depth_sounder.py rudder.py engine.py tanks.py battery.py weather.py (tier 3)
 │   ├── calc/         wind.py current.py performance.py meteo.py
 │   ├── signals/      catalogue.py registry.py overrides.py
-│   ├── n2k/          canid.py fastpacket.py devices.py scheduler.py
+│   ├── n2k/          canid.py fastpacket.py gateway.py scheduler.py
 │   │   └── pgns/     one module per PGN group: nav.py wind.py env.py engine.py tanks.py system.py
 │   ├── formats/      ydraw.py (Format protocol)
 │   ├── transport/    udp.py tcp.py recorder.py (Transport protocol)
@@ -77,13 +83,21 @@ n2k-sim/
 ## Key interfaces
 
 ```python
-# environment / vessel: stateful models advanced by dt
-class Model(Protocol):
-    def step(self, t: float, dt: float, inputs) -> State: ...
+# tier 1 / tier 2: stateful models advanced by dt
+class Environment:  def step(self, t: float, dt: float, cfg: EnvConfig) -> EnvironmentState
+class Boat:         def step(self, t: float, dt: float, env: EnvironmentState,
+                             cfg: BoatConfig) -> BoatState
 
-# sensors / calc: pure
-def read_sensors(env: EnvironmentState, vessel: VesselState, static: StaticData) -> SensorReadings
-def calculate(readings: SensorReadings) -> CalculatedValues
+# tier 3: one pure function per device, registered with its signals and PGNs
+@dataclass(frozen=True)
+class DeviceSpec:
+    name: str                                   # "gps", "compass", …
+    read: Callable[[EnvironmentState, BoatState, StaticData], dict[str, float | None]]
+    signals: tuple[str, ...]
+    pgns: tuple[PgnSpec, ...]
+
+# calc: pure
+def calculate(readings: Mapping[str, float | None], cfg: CalcConfig) -> CalculatedValues
 
 # signals
 @dataclass(frozen=True)
@@ -119,7 +133,7 @@ class Transport(Protocol):
   (no queues, no backpressure problems). Encoders never see partial updates.
 - UI commands (REST/WebSocket) mutate **config objects only** (scenario parameters, overrides,
   autopilot target). Models read config at the start of each tick → no locking needed.
-- Sequence IDs (SID) are shared per device and incremented per "measurement cycle" so related
+- Sequence IDs (SID) are shared per sensor module and incremented per "measurement cycle" so related
   PGNs (e.g. 129026 and 129025 from the GPS) carry the same SID, as real devices do.
 - UDP output batches frames into datagrams of ≤ 1400 bytes or every 50 ms, whichever comes
   first (mirrors SH-wg behaviour). TCP writes frames as produced; slow clients are dropped when
@@ -127,7 +141,7 @@ class Transport(Protocol):
 
 ## Configuration & persistence
 
-- `config.py` defines a pydantic `Scenario` (environment, vessel, autopilot, static data, overrides,
+- `config.py` defines a pydantic `Scenario` (environment, boat, autopilot, static data, overrides,
   output settings). JSON save/load via UI and `--scenario file.json` on the CLI.
 - Runtime settings (bind addresses, ports, seed) via CLI flags / environment variables.
 
@@ -137,7 +151,7 @@ class Transport(Protocol):
 |---|---|
 | geo / units | property tests: wrap angles, vector round trips |
 | environment | mean/limits over long runs with fixed seed (TWD stays within ± amplitude, gusts ≤ max) |
-| vessel | autopilot converges; polar interpolation exact at grid points |
+| boat | autopilot converges; polar interpolation exact at grid points; leeway sign and range |
 | sensors / calc | apparent→true→apparent round trip; set/drift recovers the configured current |
 | n2k encoders | golden payloads; decode with an independent Python decoder in tests |
 | fast-packet | frame count, sequence counter, padding |

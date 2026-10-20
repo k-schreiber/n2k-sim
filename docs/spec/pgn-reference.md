@@ -206,6 +206,16 @@ dest lon 10⁻⁷ · 32 i16 closing velocity 0.01 m/s.
 ### 129539 GNSS DOPs — single
 | 0 | u8 | SID | 1 | u8 | desired/actual mode (2 = 3D) [GK] | 2 | i16 | HDOP 0.01 [APP] | 4 | i16 | VDOP 0.01 [GK] | 6 | i16 | TDOP 0.01 [GK] |
 
+### 129540 GNSS Satellites in View — fast-packet, 3 + 12·n bytes [GK]
+| Off | Type | Field |
+|---|---|---|
+| 0 | u8 | SID |
+| 1 | u8 | bits 0–1 range residual mode, rest reserved |
+| 2 | u8 | satellites in view n |
+| per satellite (12 B) | u8 PRN · i16 elevation 0.0001 rad · u16 azimuth 0.0001 rad · i16 SNR 0.01 dB · i32 range residual 10⁻⁵ m · u8 bits 0–3 status (0 not tracked, 1 tracked, 2 used, 3–5 with differential) |
+
+Not decoded by NMEA Dashboard. Verify against canboat before relying on it.
+
 ### 130306 Wind Data — single [APP]
 | 0 | u8 | SID | 1 | u16 | speed 0.01 m/s | 3 | u16 | angle 0.0001 rad (0..2π) | 5 | u8 | bits 0–2 reference | 6 | reserved |
 

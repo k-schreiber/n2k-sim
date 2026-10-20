@@ -1,32 +1,26 @@
 # N2K Output
 
-## Virtual devices
+## Gateway (single source)
 
-A real backbone has several devices, each with its own source address and NAME. The simulator
-claims addresses for these (address claim PGN 60928 at start and every 5 min — not required by the
-standard, but lets late listeners learn the devices; v1 does not answer ISO requests).
+The simulator does **not** emulate a real multi-device backbone. Like a simple gateway or
+multiplexer, it emits every PGN from **one source address** (default `0x23`, configurable) and
+announces one ISO address claim (PGN 60928) at start and every 5 min.
 
-| Device | Source | Device class / function [GK] | PGNs |
-|---|---|---|---|
-| GPS | 0x01 | 60 Navigation / 145 Ownship Position | 126992, 129025, 129026, 129029, 129033, 129539, 127258 |
-| Compass / attitude | 0x02 | 60 Navigation / 140 Heading Sensor | 127250, 127251, 127257 |
-| Speed log | 0x03 | 60 / 155 Speed Sensors | 128259, 128275, 130312 (water temp) |
-| Depth sounder | 0x04 | 60 / 130 Bottom Depth | 128267 |
-| Wind sensor | 0x05 | 85 External Environment / 130 Atmospheric | 130306 (apparent) |
-| Instrument processor | 0x06 | 60 / 135 (display) | 130306 (true ref 3 + ref 0), 129291 |
-| Rudder sensor | 0x07 | 40 Steering / 155 Rudder | 127245 |
-| Engine gateway | 0x08 | 50 Propulsion / 140 Engine | 127488, 127489 |
-| Tank sender(s) | 0x09 | 75 Sensor Comm / 150 Fluid Level | 127505 |
-| Battery monitor | 0x0A | 35 Electrical Generation / 170 Battery | 127508 |
-| Weather station | 0x0B | 85 / 130 | 130310, 130311, 130313, 130314, 130316 (dew point) |
+| NAME field | Value |
+|---|---|
+| Unique number | derived from host name (stable per machine) |
+| Manufacturer code | 2046 (reserved, avoids impersonating real products) |
+| Device class / function | 25 Inter/Intranetwork Device / 136 PC Gateway [GK] |
+| Industry group | 4 (marine) |
 
-Manufacturer code: 2046 (reserved/"unknown") to avoid impersonating real products.
+Sensor modules stay separate in code (tier 3, `DeviceSpec`), so per-device addresses could be
+added later inside `n2k/gateway.py` without touching sensors or encoders.
 
 ## PGN schedule (defaults, editable per PGN)
 
 | PGN | Name | Interval | Priority | Frame |
 |---|---|---|---|---|
-| 60928 | ISO Address Claim | start + 300 s | 6 | single (PDU1 → 0xFF) |
+| 60928 | ISO Address Claim (gateway) | start + 300 s | 6 | single (PDU1 → 0xFF) |
 | 126992 | System Time | 1 s | 3 | single |
 | 127245 | Rudder | 100 ms | 2 | single |
 | 127250 | Vessel Heading | 100 ms | 2 | single |
@@ -46,6 +40,7 @@ Manufacturer code: 2046 (reserved/"unknown") to avoid impersonating real product
 | 129033 | Time & Date | 1 s | 3 | single |
 | 129291 | Set & Drift | 1 s | 3 | single |
 | 129539 | GNSS DOPs | 1 s | 6 | single |
+| 129540 | GNSS Satellites in View | 5 s | 6 | fast (3 + 12 × n B) |
 | 130306 | Wind (apparent) | 100 ms | 2 | single |
 | 130306 | Wind (true boat-ref, ground-ref) | 1 s each | 2 | single |
 | 130310 | Environmental (obsolete) | 2 s, **off** by default | 5 | single |
@@ -67,9 +62,11 @@ Not encoded in v1: 130577 (layout uncertain; redundant with 129026/128259/129291
   decoder quirks.
 - `None` value → field sentinel ("not available").
 - Values are rounded to the field resolution and clamped to the field range.
-- SID: one counter per device, incremented once per measurement cycle (GPS cycle = 1 s; others per
-  emission of their fastest PGN).
-- Fast-packet sequence counter per (PGN, source).
+- SID: one counter per sensor module, incremented once per measurement cycle (GPS cycle = 1 s;
+  others per emission of their fastest PGN) — a gateway forwards SIDs unchanged.
+- Fast-packet sequence counter per PGN (single source).
+- 127250 is sent with reference = magnetic, deviation and variation = n/a (fluxgate compass);
+  variation comes from 127258.
 
 ## YD RAW format
 

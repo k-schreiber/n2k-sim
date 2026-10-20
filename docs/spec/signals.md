@@ -16,15 +16,15 @@ Overrides are **transmit-only**: they replace the value in the outgoing PGNs and
 | `env.current_set`, `env.current_drift` | °T, kn | |
 | `env.wave_dir`, `env.wave_height`, `env.wave_length`, `env.wave_period` | °T, m, m, s | |
 | `env.depth` | m | depth below waterline at boat position |
+| `boat.heading`, `boat.ctw`, `boat.leeway`, `boat.heel` | °T, °T, °, ° | tier-2 truth (leeway: + = slipping to starboard) |
 
 ## Sensors (SEN)
 
 | Signal | UI unit | Device (virtual) | PGN |
 |---|---|---|---|
 | `awa`, `aws` | °, kn | wind sensor | 130306 ref 2 |
-| `heading_mag`, `deviation` | °M, ° | compass | 127250 |
-| `heading_true` | °T | compass (derived with variation) | 127250 (if set to true) |
-| `variation` | ° (E+) | compass / GPS | 127250, 127258 |
+| `heading_mag` | °M | fluxgate compass | 127250 (ref magnetic; deviation and variation fields n/a) |
+| `variation` | ° (E+) | GPS (built-in model) | 127258 |
 | `rot` | °/min | compass | 127251 |
 | `yaw`, `pitch`, `roll` | ° | compass (attitude) | 127257 |
 | `rudder` | ° (stbd +) | rudder sensor | 127245 |
@@ -34,24 +34,30 @@ Overrides are **transmit-only**: they replace the value in the outgoing PGNs and
 | `depth`, `depth_offset` | m | depth sounder | 128267 |
 | `lat`, `lon` | ° | GPS | 129025, 129029 |
 | `cog`, `sog` | °T, kn | GPS | 129026 |
-| `gnss_time` | UTC | GPS | 126992, 129029, 129033 |
-| `hdop`, `vdop`, `pdop`, `tdop`, `satellites`, `altitude` | –, m | GPS | 129029, 129539 |
+| `gnss_time`, `local_offset` | UTC, min | GPS | 126992, 129029, 129033 |
+| `altitude`, `geoidal_separation` | m | GPS | 129029 |
+| `fix_type`, `fix_method`, `integrity` | enum | GPS (3D, GNSS fix) | 129029, 129539 |
+| `sats_used`, `sats_in_view` (+ per-satellite PRN, elevation, azimuth, SNR, status) | – | GPS | 129029, 129540 |
+| `hdop`, `vdop`, `pdop`, `tdop` | – | GPS | 129029 (HDOP, PDOP), 129539 (HDOP, VDOP, TDOP) |
 
 ## Calculated (CALC) — instrument processor
 
 | Signal | UI unit | Formula (from sensor values only) | PGN |
 |---|---|---|---|
-| `tws`, `twa` | kn, ° | `x = AWS·sin AWA; y = AWS·cos AWA − STW; TWS = √(x²+y²); TWA = atan2(x, y)` | 130306 ref 3 |
+| `heading_true` | °T | `heading_mag + variation` | – (UI; compass sends magnetic) |
+| `leeway_calc` | ° | `K_calc · roll / STW²` (roll from attitude, STW in kn), signed to leeward, clamp ±10° | – (UI) |
+| `tws`, `twa` | kn, ° | `x = AWS·sin AWA − STW·sin λ; y = AWS·cos AWA − STW·cos λ; TWS = √(x²+y²); TWA = atan2(x, y)` (λ = `leeway_calc`, angles relative to heading) | 130306 ref 3 |
 | `twd` | °T | `heading_true + TWA` | 130306 ref 0 |
 | `gws`, `gwd` | kn, °T | as TWS/TWD but with SOG/COG instead of STW/heading (ground wind) | – (UI) |
-| `current_set`, `current_drift` | °T, kn | `C = V(SOG, COG) − V(STW, heading_true)` | 129291 |
+| `current_set`, `current_drift` | °T, kn | `C = V(SOG, COG) − V(STW, heading_true + λ)` | 129291 |
 | `vmg_wind` | kn | `STW · cos TWA` | – (UI) |
 | `polar_speed`, `performance` | kn, % | polar(TWS, TWA); STW / polar_speed | – (UI) |
 | `dew_point` | °C | Magnus formula from air temp and humidity | 130316 (src 9) |
 
-Consistency property (no sensor errors, no leeway): calculated TWS/TWA/TWD equal the
-environment's water-referenced wind `env.wws/wwd` exactly, and `current_set/drift` equal the
-environment current. Unit tests assert this.
+Consistency property (no sensor errors, `K_calc = K_boat`): calculated TWS/TWA/TWD equal the
+environment's water-referenced wind `env.wws/wwd`, and `current_set/drift` equal the environment
+current. Unit tests assert this; with `K_calc ≠ K_boat` (or `K_calc = 0`, i.e. no leeway
+correction) the calculated current contains the leeway error, as on a real boat.
 
 ## Static (STAT)
 
@@ -61,7 +67,7 @@ environment current. Unit tests assert this.
 | Engine 1 | `engine.rpm` (0 sailing / auto from motor mode), `engine.oil_pressure` (3.5 bar), `engine.coolant_temp` (80 °C), `engine.oil_temp` (90 °C), `engine.alternator_v` (14.2 V), `engine.fuel_rate` (2.5 L/h), `engine.hours` (1250 h), `engine.load` (40 %) | 127488, 127489 |
 | Tanks | `tank.fuel` (75 % of 200 L), `tank.fresh_water1` (60 % of 300 L), `tank.fresh_water2` (90 % of 150 L), `tank.black_water` (20 % of 80 L) | 127505 |
 | Batteries | `battery.house` (12.6 V, −4.2 A, 25 °C), `battery.engine` (12.8 V, 0 A, 22 °C) | 127508 |
-| Config | `depth_offset` (−1.8 m keel), `variation` (+4.5° E), `deviation` (0°) | 128267, 127250, 127258 |
+| Config | `depth_offset` (−1.8 m keel), `variation` (+4.5° E), `leeway_k_boat` (10), `leeway_k_calc` (10) | 128267, 127258 |
 
 Engine values other than RPM are sent only while `engine.rpm > 0` (otherwise null/not sent,
 matching a switched-off engine ECU); configurable.
