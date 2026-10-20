@@ -23,8 +23,8 @@ Overrides are **transmit-only**: they replace the value in the outgoing PGNs and
 | Signal | UI unit | Device (virtual) | PGN |
 |---|---|---|---|
 | `awa`, `aws` | °, kn | wind sensor | 130306 ref 2 |
-| `heading_mag` | °M | fluxgate compass | 127250 (ref magnetic; deviation and variation fields n/a) |
-| `variation` | ° (E+) | GPS (built-in model) | 127258 |
+| `heading_mag` | °M | fluxgate compass | 127250 (ref magnetic; deviation n/a) |
+| `variation` | ° (E+) | GPS (built-in model) | 127258, and the variation field of 127250 |
 | `rot` | °/min | compass | 127251 |
 | `yaw`, `pitch`, `roll` | ° | compass (attitude) | 127257 |
 | `rudder` | ° (stbd +) | rudder sensor | 127245 |

@@ -9,12 +9,16 @@ ROT_SCALE = 3.125e-8  # rad/s per bit
 
 
 def encode_127250(s: Signals, sid: int) -> list[bytes]:
-    """Vessel heading, magnetic reference, deviation and variation not available."""
+    """Vessel heading, magnetic reference, deviation not available.
+
+    The variation field carries the GPS variation (east positive), like a gateway that completes
+    the compass data, because some software reads variation only from here and not from 127258.
+    """
     return [
         bytes([sid & 0xFF])
         + f.angle_u16(s.get("heading_mag"))
         + f.i16(None)
-        + f.i16(None)
+        + f.angle_i16(s.get("variation"))
         + b"\xfd"
     ]
 

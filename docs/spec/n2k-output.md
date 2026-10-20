@@ -65,8 +65,10 @@ Not encoded in v1: 130577 (layout uncertain; redundant with 129026/128259/129291
 - SID: one counter per sensor module, incremented once per measurement cycle (GPS cycle = 1 s;
   others per emission of their fastest PGN) — a gateway forwards SIDs unchanged.
 - Fast-packet sequence counter per PGN (single source).
-- 127250 is sent with reference = magnetic, deviation and variation = n/a (fluxgate compass);
-  variation comes from 127258.
+- 127250 is sent with reference = magnetic and deviation = n/a (fluxgate compass). The
+  variation field carries the GPS variation (also sent in 127258): the gateway completes the
+  compass data because some software (e.g. TimeZero, qtVLM "Value from NMEA") reads variation only
+  from 127250.
 
 ## YD RAW format
 

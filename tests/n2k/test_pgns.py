@@ -171,12 +171,16 @@ def test_127258(run, signals):
 def test_127250(run, signals):
     _, d = one(run, "127250", signals)
     close(d["heading"], D(123.4), 1e-4)
-    assert d["reference"] == 1 and d["deviation"] is None and d["variation"] is None
+    assert d["reference"] == 1 and d["deviation"] is None
+    close(d["variation"], D(4.5), 1e-4)
 
 
 def test_127250_golden(signals):
     got = SPECS["127250"].encode({"heading_mag": 1.0}, 9)[0]
     assert got == bytes([9, 0x10, 0x27, 0xFF, 0x7F, 0xFF, 0x7F, 0xFD])
+    # 4.5° E = 0.07854 rad -> 785 = 0x0311, east positive.
+    got = SPECS["127250"].encode({"heading_mag": 1.0, "variation": 0.0785398}, 9)[0]
+    assert got == bytes([9, 0x10, 0x27, 0xFF, 0x7F, 0x11, 0x03, 0xFD])
 
 
 def test_127251(run, signals):

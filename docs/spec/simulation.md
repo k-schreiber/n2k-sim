@@ -148,7 +148,7 @@ Each device module (`sensors/*.py`) produces only what that kind of device measu
 | Device | Measures | Notes |
 |---|---|---|
 | GPS / GNSS receiver | lat, lon, altitude (2 m), COG, SOG, UTC date & time, local offset, magnetic variation (from built-in model = configured value), fix type 3D / method GNSS fix, satellites used (12) and in view (14, with PRN, elevation, azimuth, SNR), HDOP 0.8, VDOP 1.2, PDOP 1.4, TDOP 0.9, geoidal separation 45 m | COG/SOG = true ground track, so they include leeway and current |
-| Fluxgate compass | magnetic heading, rate of turn, pitch & roll (heel + waves), yaw | industry-standard fluxgate (e.g. like a Precision-9 / EV-1 sensor core): reports **magnetic** heading; deviation field n/a; variation is not measured by the compass (comes from the GPS, 127258) |
+| Fluxgate compass | magnetic heading, rate of turn, pitch & roll (heel + waves), yaw | industry-standard fluxgate (e.g. like a Precision-9 / EV-1 sensor core): reports **magnetic** heading; deviation field n/a; variation is not measured by the compass; it comes from the GPS (127258) and the gateway also puts it into the 127250 variation field |
 | Wind sensor (masthead) | AWA, AWS | true apparent wind: wind over ground − boat velocity over ground |
 | Speed log (paddle wheel) | STW (speed along the course through water), log, trip, water temperature | |
 | Depth sounder | depth below transducer, transducer offset | depth = seabed depth − transducer depth (0.5 m) |

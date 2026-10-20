@@ -286,7 +286,8 @@ Checked against `ttlappalainen/NMEA2000` (commit 8d101b3) and `ttlappalainen/NME
   sentence, or World Magnetic Model — *Boat → Boat settings → Variation*). On a pure N2K stream
   there is no RMC, so with "from RMC" it applies no variation and treats the magnetic 127250
   heading as true (confirmed by test: with simulator variation = 0 its current matches). Use WMM
-  or a forced value in qtVLM. Other software (e.g. TimeZero) reads variation only from the
+  or a forced value in qtVLM; the simulator also fills the 127250 variation field so a "from NMEA"
+  source has a value to read. Other software (e.g. TimeZero) reads variation only from the
   127250 variation field, not from 127258.
 
 The simulator follows the documented convention: east positive, true = magnetic + variation.
