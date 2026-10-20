@@ -27,7 +27,7 @@
   (2) very lean **boat** simulation, (3) noise-free **sensors**. See [architecture.md](architecture.md).
 - FR-1.1 Fixed-step simulation tick (default 10 Hz) in real time; pause / resume; reset to scenario.
 - FR-1.2 Environment: wind (TWD, TWS, oscillation, gusts), current (set, drift), waves (direction,
-  height, wavelength). See [simulation.md](simulation.md).
+  height, period). See [simulation.md](simulation.md).
 - FR-1.3 Boat: position, heading, STW from polar, heel from lookup, **leeway** from heel and STW,
   attitude from waves, rudder and rate of turn from the autopilot, engine for motoring.
 - FR-1.4 Autopilot modes: `heading` (hold compass course), `twa` (hold true wind angle, tacks or

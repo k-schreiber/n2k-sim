@@ -179,3 +179,17 @@ def test_processor_current_is_steady_in_waves_and_gusts():
             continue
         assert ms_to_kn(v["current_drift"]) == pytest.approx(0.5, abs=0.06)
         assert math.degrees(geo.wrap_pi(v["current_set"] - math.radians(135))) == pytest.approx(0, abs=6)
+
+
+def test_wave_period_drives_wavelength_and_old_files_load():
+    from n2k_sim.config import Waves
+    from n2k_sim.environment.model import wavelength
+
+    assert wavelength(5.0) == pytest.approx(39.0, abs=0.1)
+    assert wavelength(8.0) == pytest.approx(99.9, abs=0.2)
+    assert Waves.model_validate({"length": 40.0}).period == pytest.approx(5.1)
+    s = Scenario()
+    s.waves.period = 8.0
+    _, snap = run(s, 1)
+    assert snap.values["env.wave_period"] == 8.0
+    assert snap.values["env.wave_length"] == pytest.approx(99.9, abs=0.2)

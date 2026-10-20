@@ -56,7 +56,7 @@ const scenario = {
   seed: 1,
   wind: { fixed: false, twd: 300, tws: 12, osc_amplitude: 8, osc_period_min: 6, shift_rate: 0.5, gust_interval_s: 90, gust_strength_pct: 35, gust_duration_s: 20, gust_veer: 5, lull_depth_pct: 10 },
   current: { fixed: true, set: 135, drift: 0.5, tidal_amplitude_pct: 50, tidal_period_h: 12.42 },
-  waves: { enabled: true, direction: 290, height: 1, length: 40, irregularity: 0.2 },
+  waves: { enabled: true, direction: 290, height: 1, period: 5, irregularity: 0.2 },
   seabed: { fixed: false, depth: 20, depth_min: 12, depth_max: 35, change_period_min: 5, transducer_depth: 0.5, keel_depth: 1.8 },
   boat: { lat: 43.48, lon: 16.4, polar_file: 'mock_cruiser_40.pol', leeway_k: 10, stw_time_constant_s: 8, max_turn_rate: 6, motor_speed_per_1000rpm: 2.6 },
   autopilot: { mode: 'twa', heading: 0, twa: -45, rpm: 2200 },
@@ -94,7 +94,7 @@ function values() {
   const wvH = scenario.waves.enabled ? scenario.waves.height : 0;
   const v = {
     'env.gwd': twd, 'env.gws': tws, 'env.current_set': scenario.current.set, 'env.current_drift': scenario.current.drift,
-    'env.wave_dir': scenario.waves.direction, 'env.wave_height': wvH, 'env.wave_length': scenario.waves.length, 'env.depth': dep,
+    'env.wave_dir': scenario.waves.direction, 'env.wave_height': wvH, 'env.wave_length': 1.56 * scenario.waves.period ** 2, 'env.depth': dep,
     'boat.heading': hdg, 'boat.stw': stw, 'boat.heel': heel,
     awa, aws, heading_mag: (hdg - scenario.gps.variation + 360) % 360, pitch: 2 * wvH * Math.sin(t * 1.3), roll: heel + 3 * wvH * Math.sin(t * 1.1),
     rudder: 3 * Math.sin(t / 3), stw, water_temp: 19.4, depth: dep - 0.5, lat: scenario.boat.lat + t * 1e-5, lon: scenario.boat.lon + t * 1e-5,

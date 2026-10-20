@@ -165,7 +165,7 @@ const environment = (() => {
         { key: 'enabled', label: 'Enabled', bool: true, header: true },
         { key: 'direction', label: 'Direction (from)', min: 0, max: 360, step: 1, unit: '°' },
         { key: 'height', label: 'Height', min: 0, max: 8, step: 0.1, unit: 'm' },
-        { key: 'length', label: 'Wavelength', min: 5, max: 200, step: 1, unit: 'm' },
+        { key: 'period', label: 'Period', min: 2, max: 15, step: 0.1, unit: 's' },
         { key: 'irregularity', label: 'Irregularity', min: 0, max: 1, step: 0.01, unit: '' },
       ]);
       const seabed = sectionCard('Seabed', 'seabed', [

@@ -4,12 +4,14 @@ scenario files and the UI stay readable; models convert to SI when they read it.
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
+G = 9.81  # m/s²
 
 
 class Wind(BaseModel):
@@ -37,9 +39,19 @@ class Current(BaseModel):
 class Waves(BaseModel):
     enabled: bool = True
     direction: float = 290.0  # deg, waves come from
-    height: float = 1.0  # m
-    length: float = 40.0  # m
+    height: float = 1.0  # m, significant wave height
+    period: float = 5.0  # s; wavelength follows from deep-water dispersion
     irregularity: float = 0.2
+
+    @model_validator(mode="before")
+    @classmethod
+    def _length_to_period(cls, data: Any) -> Any:
+        """Accepts scenario files from before the switch to period (wavelength `length` in m)."""
+        if isinstance(data, dict) and "length" in data and "period" not in data:
+            length = float(data["length"])
+            data = {k: v for k, v in data.items() if k != "length"}
+            data["period"] = round(math.sqrt(2 * math.pi * max(length, 1.0) / G), 1)
+        return data
 
 
 class Seabed(BaseModel):

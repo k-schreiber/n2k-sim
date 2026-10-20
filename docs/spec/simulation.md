@@ -52,11 +52,14 @@ button schedules a gust immediately.
 |---|---|
 | `direction` (from) | 290° |
 | `height` H (significant) | 1.0 m |
-| `wavelength` λ | 40 m |
+| `period` T | 5.0 s |
 | `irregularity` | 0.2 (secondary component amplitude ratio) |
 
-Derived: wave number `k = 2π/λ`; deep-water period `T = sqrt(2πλ/g)` (λ = 40 m → T ≈ 5.1 s);
-encounter frequency `ωe = |ω − k·V·cos(μ)|` with `V` = SOG, `μ` = wave direction relative to the
+Height and period are the values forecasts and wave reports give. One combined sea state; wind sea
+and swell are not modelled separately.
+
+Derived: deep-water wavelength `λ = g·T²/2π ≈ 1.56·T²` (T = 5 s → λ ≈ 39 m; valid while the
+depth exceeds about λ/2); wave number `k = 2π/λ`; encounter frequency `ωe = |ω + k·V·cos(μ)|` with `V` = SOG, `μ` = wave direction relative to the
 boat's course (0 = head seas). Max wave slope `α = atan(π H / λ)`.
 
 Waves affect **only attitude** (pitch, roll) — see §6.

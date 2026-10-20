@@ -16,9 +16,9 @@ SHALLOW_DURATION = 60.0  # s
 SHALLOW_RAMP = 15.0  # s
 
 
-def wave_period(length: float) -> float:
-    """Deep-water wave period from wavelength."""
-    return math.sqrt(2 * math.pi * max(length, 0.1) / G)
+def wavelength(period: float) -> float:
+    """Deep-water wavelength from wave period: λ = g·T²/2π (≈ 1.56·T²)."""
+    return G * max(period, 0.5) ** 2 / (2 * math.pi)
 
 
 class Environment:
@@ -52,8 +52,8 @@ class Environment:
             current_drift=kn_to_ms(max(drift, 0.0)),
             wave_dir=math.radians(waves.direction % 360.0),
             wave_height=max(height, 0.0),
-            wave_length=max(waves.length, 1.0),
-            wave_period=wave_period(waves.length),
+            wave_length=wavelength(waves.period),
+            wave_period=max(waves.period, 0.5),
             wave_irregularity=waves.irregularity,
             depth=self._depth(t, cfg),
         )

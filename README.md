@@ -23,7 +23,7 @@ UI on the LAN — it has no login).
 Three tiers (details in [docs/spec/simulation.md](docs/spec/simulation.md)):
 
 1. **Environment** — wind over ground with oscillation, slow shifts, lulls and gusts; current;
-   waves (direction, height, wavelength); seabed depth.
+   waves (direction, height, period); seabed depth.
 2. **Boat** — autopilot (hold heading, hold TWA, motor), STW from a polar file, heel from a lookup
    table, leeway `K·heel/STW²`, pitch/roll from waves, rudder, rate of turn, position.
 3. **Sensors** — noise-free GPS (full GNSS data), fluxgate compass (magnetic), masthead wind,
