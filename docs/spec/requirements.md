@@ -41,7 +41,9 @@
   pressure, coolant temp, alternator voltage, hours), tanks (fuel, fresh water, black water),
   batteries (voltage, current, temperature), depth transducer offset, magnetic variation.
 - FR-2.4 **Overrides**: any sensor, calculated or static signal can be switched from `auto` to a
-  fixed value. Sensor overrides feed into calculations (see open questions).
+  fixed value. Overrides affect **only what is transmitted** (and shown as "sent" in the UI);
+  calculations always use the simulated values, so overrides can create deliberately inconsistent
+  data for testing.
 
 ### FR-3 N2K output
 - FR-3.1 Encode the PGNs in [n2k-output.md](n2k-output.md) at realistic per-PGN intervals.

@@ -21,11 +21,11 @@ and is a **pure function** where possible, so it can be tested without timers or
 ┌───────────────┐  SensorReadings (what devices measure: AWA/AWS, HDG, STW, SOG/COG, …)
 │   sensors     │  pure functions of (Environment, Vessel, StaticData)
 └──────┬────────┘
-       ▼        ◄── sensor overrides applied here (signal registry)
+       ▼
 ┌───────────────┐  CalculatedValues (TWA/TWS/TWD, set & drift, VMG, dew point)
 │ calculations  │  only from SensorReadings, like an instrument processor
 └──────┬────────┘
-       ▼        ◄── calculated/static overrides applied here
+       ▼        ◄── ALL overrides applied here, after calculation (transmit-only semantics)
 ┌───────────────┐  SignalSnapshot: flat dict name → value (SI) + metadata
 │   signals     │  registry.py (catalogue in signals.md), overrides.py
 └──────┬────────┘

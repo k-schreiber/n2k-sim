@@ -4,6 +4,8 @@ Every value the simulator handles is a named **signal** in the registry. Layers:
 **ENV** = simulation truth (not sent directly), **SEN** = sensor reading, **CALC** = calculated from
 sensor readings, **STAT** = static value set by the user. Every SEN/CALC/STAT signal can be
 overridden with a fixed value; ENV parameters have their own auto/fixed switch (simulation.md).
+Overrides are **transmit-only**: they replace the value in the outgoing PGNs and in the UI's
+"sent" column, but calculations keep using the simulated value (the UI shows both).
 
 ## Environment truth (ENV — shown in UI, not transmitted)
 

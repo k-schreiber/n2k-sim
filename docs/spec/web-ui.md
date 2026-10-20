@@ -30,8 +30,8 @@ heel table preview, engine-to-speed table, start position (lat/lon) and "telepor
 Forms per group (Meteo, Engine, Tanks, Batteries, Config) from signals.md.
 
 ### 5. Signals
-Table of every SEN/CALC/STAT signal: name, value (UI unit), layer, PGN(s), **override** toggle +
-value field. Filter by layer/group. Overridden rows highlighted.
+Table of every SEN/CALC/STAT signal: name, simulated value, **sent** value (differs when
+overridden), unit, layer, PGN(s), **override** toggle + value field. Filter by layer/group. Overridden rows highlighted.
 
 ### 6. Output
 Transport cards (enable, address, port, status, bytes/s, clients), recorder toggle, PGN table
