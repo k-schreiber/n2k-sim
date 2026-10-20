@@ -265,3 +265,23 @@ Layout of bytes 0–1 is uncertain; verify against canboat before enabling this 
 3. 130316 source 2 mapped to dew point (spec 9).
 4. Variation sign: 0183 parsers store variation west-positive, the N2K parsers store the raw
    east-positive value in the same `variation` property.
+
+## 5. Magnetic variation sign — evidence (ttlappalainen NMEA2000 / NMEA0183)
+
+Checked against `ttlappalainen/NMEA2000` (commit 8d101b3) and `ttlappalainen/NMEA0183`:
+
+- **Library core (N2kMessages.cpp)** stores the 127250/127258 variation as a plain signed value; no
+  sign conversion. The header documents 127250 as "the variation field can be used to correct the
+  Magnetic heading to produce a True heading", without naming the sign.
+- **NMEA0183 library** defines the convention explicitly: `NMEA0183ParseRMC` negates the value for
+  `W` (→ east positive), and `NMEA0183SetHDG`/`SetRMC` write `E` for values ≥ 0. So in this
+  ecosystem variation is **east positive**, and therefore **true = magnetic + variation**.
+- **Example `NMEA2000ToNMEA0183/N2kDataToNMEA0183.cpp` is internally inconsistent:** line 96
+  `Heading-=Variation` (mag→true), line 122 `MagneticHeading = Heading+Variation` and line 166
+  `COG-=Variation` treat variation as west positive, while line 163 `MCOG = COG-Variation` treats it
+  as east positive. It also passes the *true* heading into HDG's magnetic-heading field.
+- The SH-wg firmware copied lines 96/HDG from this example; the wellenvogel gateway does it right
+  (`Heading+=Variation`). NMEA Dashboard's 127250 decoder and, judging by its display, qtVLM
+  subtract as well.
+
+The simulator follows the documented convention: east positive, true = magnetic + variation.
