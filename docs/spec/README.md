@@ -16,6 +16,7 @@ OpenCPN with N2K support) at the desk, without a boat.
 | [simulation.md](simulation.md) | Wind, current, waves, boat motion, autopilot, polar, heel and attitude models |
 | [n2k-output.md](n2k-output.md) | PGN mapping, gateway source, rates, YD RAW encoding, transports |
 | [pgn-reference.md](pgn-reference.md) | Byte-level encoding reference per PGN (extracted from decoders) |
+| [lib-crosscheck.md](lib-crosscheck.md) | Cross-check of all encoders against the ttlappalainen NMEA2000 library, with fix list |
 | [web-ui.md](web-ui.md) | UI pages, controls, REST and WebSocket API |
 | [open-questions.md](open-questions.md) | Decisions taken as assumptions and questions still open |
 
