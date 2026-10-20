@@ -118,7 +118,9 @@ UI helpers: "Tack", "Gybe" (flip TWA sign), "+1°/−1°/+10°/−10°" heading 
 - **Roll** = heel + `A_roll · sin(ωe t + φ_r)`, `A_roll = α · |sin μ| · c_roll` (`c_roll = 1.2`).
 - **Pitch** = `A_pitch · sin(ωe t + φ_p)`, `A_pitch = α · |cos μ| · c_pitch` (`c_pitch = 0.8`).
 - **Yaw** (127257) = heading (yaw angle reported by the attitude sensor = true heading, small
-  wave-induced oscillation ±1–2° added to heading itself).
+  wave-induced oscillation ±1–2° added to heading itself). The wave yaw turns the **whole hull**:
+  it is applied to the course through water (and therefore COG/SOG), not only to the compass, so
+  `COG/SOG − (heading + leeway, STW)` always equals the current exactly.
 - Clamp roll ±45°, pitch ±20°.
 
 ### 7. Polar file format
@@ -171,3 +173,10 @@ instrument processor (`calc/`) therefore applies **leeway correction** with the 
 editable K (default = boat K). With matching K, calculated set & drift and true wind exactly recover
 the simulated current and water wind; with a different K the calculation shows the realistic
 error — useful for testing.
+
+**Note for clients that calculate current themselves (e.g. qtVLM):** they compute
+`COG/SOG − (CTW, STW)` with their own leeway estimate from the heel in PGN 127257. That heel
+includes the wave roll (about ±5° in a 1 m beam sea), so an undamped estimate makes their current
+oscillate with the waves, and a leeway coefficient different from `boat.leeway_k` (default 10)
+leaves a constant bias. Both are realistic; with waves disabled and matching K they recover the
+simulated current exactly.

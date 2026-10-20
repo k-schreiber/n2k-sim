@@ -49,7 +49,7 @@ Overrides are **transmit-only**: they replace the value in the outgoing PGNs and
 | `tws`, `twa` | kn, ° | `x = AWS·sin AWA − STW·sin λ; y = AWS·cos AWA − STW·cos λ; TWS = √(x²+y²); TWA = atan2(x, y)` (λ = `leeway_calc`, angles relative to heading) | 130306 ref 3 |
 | `twd` | °T | `heading_true + TWA` | 130306 ref 0 |
 | `gws`, `gwd` | kn, °T | as TWS/TWD but with SOG/COG instead of STW/heading (ground wind) | – (UI) |
-| `current_set`, `current_drift` | °T, kn | `C = V(SOG, COG) − V(STW, heading_true + λ)` | 129291 |
+| `current_set`, `current_drift` | °T, kn | `C = V(SOG, COG) − V(STW, heading_true + λ)`, vector-damped with τ = 20 s like real instruments | 129291 |
 | `vmg_wind` | kn | `STW · cos TWA` | – (UI) |
 | `polar_speed`, `performance` | kn, % | polar(TWS, TWA); STW / polar_speed | – (UI) |
 | `dew_point` | °C | Magnus formula from air temp and humidity | 130316 (src 9) |

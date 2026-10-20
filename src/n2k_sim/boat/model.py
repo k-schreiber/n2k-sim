@@ -65,6 +65,9 @@ class Boat:
         self._heel = 0.0
         self._leeway = 0.0
         self._wave_phase = 0.0
+        self._yaw = 0.0  # rad, wave-induced yaw; turns the hull and therefore its track
+        self._sog = 0.0
+        self._cog = 0.0
         self._last_heading_wave: float | None = None
         self._log_total = 0.0
         self._log_trip = 0.0
@@ -103,6 +106,10 @@ class Boat:
         tau = max(cfg.boat.stw_time_constant_s, 0.1)
         self._stw += (target - self._stw) * min(dt / tau, 1.0)
 
+        # Wave-induced motion (encounter frequency from the previous ground track). Yaw turns the
+        # whole hull, so it changes the track as well as what the compass sees.
+        roll_w, pitch, self._yaw = self._waves(dt, env, self._sog, self._cog)
+
         # Ground velocity with the previous leeway (heel depends on it via apparent wind).
         ground = self._ground_velocity(current)
         aws, awa = self._apparent(wind_ground, ground)
@@ -117,11 +124,13 @@ class Boat:
 
         ground = self._ground_velocity(current)
         sog, cog = geo.polar(ground)
+        self._sog, self._cog = sog, cog
         self._lat, self._lon = geo.step_position(self._lat, self._lon, ground[0] * dt, ground[1] * dt)
         self._log_total += self._stw * dt
         self._log_trip += self._stw * dt
 
-        roll, pitch, yaw = self._waves(dt, env, sog, cog)
+        yaw = self._yaw
+        roll = max(-MAX_ROLL, min(MAX_ROLL, self._heel + roll_w))
         heading_wave = geo.wrap_2pi(self._heading + yaw)
         rot = 0.0 if self._last_heading_wave is None else geo.wrap_pi(heading_wave - self._last_heading_wave) / dt
         self._last_heading_wave = heading_wave
@@ -134,7 +143,7 @@ class Boat:
             heading=self._heading,
             heading_wave=heading_wave,
             rot=rot,
-            ctw=geo.wrap_2pi(self._heading + self._leeway),
+            ctw=geo.wrap_2pi(heading_wave + self._leeway),
             stw=self._stw,
             target_stw=target,
             leeway=self._leeway,
@@ -161,17 +170,18 @@ class Boat:
         return math.radians(ap.heading % 360.0)
 
     def _ground_velocity(self, current: tuple[float, float]) -> tuple[float, float]:
-        water = geo.vector(self._stw, self._heading + self._leeway)
+        water = geo.vector(self._stw, self._heading + self._yaw + self._leeway)
         return geo.add(water, current)
 
     def _apparent(self, wind_ground, ground) -> tuple[float, float]:
         """Apparent wind: air velocity relative to the boat, angle relative to the heading."""
         aws, from_dir = geo.wind_from_polar(geo.sub(wind_ground, ground))
-        return aws, geo.wrap_pi(from_dir - self._heading)
+        return aws, geo.wrap_pi(from_dir - self._heading - self._yaw)
 
     def _waves(self, dt: float, env: EnvironmentState, sog: float, cog: float) -> tuple[float, float, float]:
+        """Returns the wave components (roll, pitch, yaw) in rad; roll is added to the heel."""
         if env.wave_height <= 0:
-            return max(-MAX_ROLL, min(MAX_ROLL, self._heel)), 0.0, 0.0
+            return 0.0, 0.0, 0.0
         omega = 2 * math.pi / env.wave_period
         k = 2 * math.pi / env.wave_length
         mu = geo.wrap_pi(env.wave_dir - cog)  # 0 = head seas
@@ -183,9 +193,7 @@ class Boat:
         roll_w = slope * abs(math.sin(mu)) * ROLL_FACTOR * (math.sin(p) + irr * math.sin(SECONDARY_FREQ * p + 0.7))
         pitch_w = slope * abs(math.cos(mu)) * PITCH_FACTOR * (math.cos(p) + irr * math.sin(SECONDARY_FREQ * p + 2.1))
         yaw_w = slope * YAW_FACTOR * abs(math.sin(2 * mu)) * math.sin(p + 1.0)
-        roll = max(-MAX_ROLL, min(MAX_ROLL, self._heel + roll_w))
-        pitch = max(-MAX_PITCH, min(MAX_PITCH, pitch_w))
-        return roll, pitch, yaw_w
+        return roll_w, max(-MAX_PITCH, min(MAX_PITCH, pitch_w)), yaw_w
 
 
 def leeway(heel: float, stw: float, k: float, motoring: bool) -> float:

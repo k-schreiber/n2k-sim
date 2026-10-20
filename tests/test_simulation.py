@@ -156,3 +156,26 @@ def test_position_moves_along_cog():
     sim, snap = run(s, 60)
     assert snap.values["lat"] > s.boat.lat
     assert snap.values["lon"] == pytest.approx(s.boat.lon, abs=1e-5)
+
+
+def test_sensors_consistent_with_current_in_waves():
+    """GPS track minus (heading + true leeway, STW) is exactly the current, even while yawing in waves."""
+    sim = Simulation(Scenario(), clock=lambda: 1_760_000_000.0)
+    for i in range(3000):
+        v = sim.step(0.1).values
+        if i < 300:
+            continue
+        ctw = v["heading_mag"] + v["variation"] + v["boat.leeway"]
+        drift, set_ = geo.polar(geo.sub(geo.vector(v["sog"], v["cog"]), geo.vector(v["stw"], ctw)))
+        assert ms_to_kn(drift) == pytest.approx(0.5, abs=0.01)
+        assert math.degrees(geo.wrap_pi(set_ - math.radians(135))) == pytest.approx(0, abs=1)
+
+
+def test_processor_current_is_steady_in_waves_and_gusts():
+    sim = Simulation(Scenario(), clock=lambda: 1_760_000_000.0)
+    for i in range(6000):
+        v = sim.step(0.1).values
+        if i < 1200:
+            continue
+        assert ms_to_kn(v["current_drift"]) == pytest.approx(0.5, abs=0.06)
+        assert math.degrees(geo.wrap_pi(v["current_set"] - math.radians(135))) == pytest.approx(0, abs=6)

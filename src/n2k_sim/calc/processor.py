@@ -11,6 +11,7 @@ from n2k_sim.boat.tables import Polar
 from n2k_sim.units import KNOT, k_to_c, c_to_k
 
 ROLL_FILTER_TIME = 10.0  # s, processors average heel before using it for leeway
+CURRENT_FILTER_TIME = 20.0  # s, set & drift damping (vector average), as on real instruments
 MAX_LEEWAY = 10.0  # deg
 MAGNUS_A, MAGNUS_B = 17.62, 243.12
 
@@ -19,6 +20,7 @@ class Processor:
     def __init__(self, polar: Polar):
         self.polar = polar
         self._roll: float | None = None
+        self._current: tuple[float, float] | None = None  # damped (east, north) vector
 
     def step(self, r: Mapping[str, Any], dt: float, leeway_k: float) -> dict[str, Any]:
         out: dict[str, Any] = dict.fromkeys(
@@ -54,7 +56,14 @@ class Processor:
             if aws is not None and awa is not None:
                 gws, gwa = true_wind(aws, awa, sog, geo.wrap_pi(cog - hdg))
                 out.update(gws=gws, gwd=geo.wrap_2pi(hdg + gwa))
-            drift, set_ = geo.polar(geo.sub(geo.vector(sog, cog), geo.vector(stw, hdg + lw)))
+            raw = geo.sub(geo.vector(sog, cog), geo.vector(stw, hdg + lw))
+            if self._current is None:
+                self._current = raw
+            else:
+                a = min(dt / CURRENT_FILTER_TIME, 1.0)
+                self._current = (self._current[0] + (raw[0] - self._current[0]) * a,
+                                 self._current[1] + (raw[1] - self._current[1]) * a)
+            drift, set_ = geo.polar(self._current)
             out.update(current_set=set_, current_drift=drift)
         return out
 
