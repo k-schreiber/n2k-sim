@@ -14,7 +14,7 @@ OpenCPN with N2K support) at the desk, without a boat.
 | [architecture.md](architecture.md) | Modules, data flow, tick loop, interfaces, directory layout |
 | [signals.md](signals.md) | Catalogue of every simulated, sensed, calculated and static signal |
 | [simulation.md](simulation.md) | Wind, current, waves, boat motion, autopilot, polar, heel and attitude models |
-| [n2k-output.md](n2k-output.md) | PGN mapping, virtual devices, rates, YD RAW encoding, transports |
+| [n2k-output.md](n2k-output.md) | PGN mapping, gateway source, rates, YD RAW encoding, transports |
 | [pgn-reference.md](pgn-reference.md) | Byte-level encoding reference per PGN (extracted from decoders) |
 | [web-ui.md](web-ui.md) | UI pages, controls, REST and WebSocket API |
 | [open-questions.md](open-questions.md) | Decisions taken as assumptions and questions still open |

@@ -22,8 +22,8 @@ Three cards — **Wind**, **Current**, **Waves** — each parameter from simulat
 number input, and per card a **Fixed / Simulated** switch. Wind card: "Gust now" button, live
 mini-chart of TWD/TWS. Depth: range or fixed, "Shallow patch" button.
 
-### 3. Vessel
-Autopilot mode and targets, polar (select file / upload .pol, preview table and polar diagram),
+### 3. Boat
+Autopilot mode and targets, leeway factors (boat K, instrument K), polar (select file / upload .pol, preview table and polar diagram),
 heel table preview, engine-to-speed table, start position (lat/lon) and "teleport".
 
 ### 4. Static data
@@ -45,7 +45,7 @@ the frontend stays dumb; conversion lives in `units.py`):
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/api/state` | full snapshot (signals, env, vessel, output status) |
+| GET | `/api/state` | full snapshot (signals, env, boat, output status) |
 | GET/PUT | `/api/scenario` | read / replace whole scenario |
 | PATCH | `/api/env/{wind,current,waves,depth}` | change parameters / fixed flag |
 | POST | `/api/env/wind/gust` | trigger gust |
