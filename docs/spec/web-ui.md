@@ -38,25 +38,61 @@ Transport cards (enable, address, port, status, bytes/s, clients), recorder togg
 (enable, interval, frames/s, last payload hex), live tail of the YD RAW stream (last 200 lines,
 pause, PGN filter).
 
-## API
+## API (contract)
 
-REST (JSON, SI units are **not** used here — the API speaks UI units with explicit unit keys so
-the frontend stays dumb; conversion lives in `units.py`):
+The API speaks **human units**: scenario fields as in `src/n2k_sim/config.py`, signal values in
+each signal's UI unit (`units.UI_UNITS`). JSON everywhere.
 
-| Method | Path | Purpose |
-|---|---|---|
-| GET | `/api/state` | full snapshot (signals, env, boat, output status) |
-| GET/PUT | `/api/scenario` | read / replace whole scenario |
-| PATCH | `/api/env/{wind,current,waves,depth}` | change parameters / fixed flag |
-| POST | `/api/env/wind/gust` | trigger gust |
-| PATCH | `/api/autopilot` | mode, targets; `POST /api/autopilot/{tack,gybe}` |
-| PATCH | `/api/static/{group}` | static values |
-| PUT/DELETE | `/api/signals/{name}/override` | set / clear override |
-| GET/PUT | `/api/polar` | current polar table / upload |
-| PATCH | `/api/output/{udp,tcp,recorder}` | transport settings |
-| PATCH | `/api/output/pgns/{pgn}` | enable, interval |
-| POST | `/api/sim/{pause,resume,reset}` | run control |
+### `GET /api/state` (also pushed on `/ws` as `{"type": "state", ...}` at 4 Hz)
 
-WebSocket `/ws`: server pushes `{"type":"state", …}` at 4 Hz and `{"type":"raw", "lines":[…]}`
-(throttled, only while the Output view is open). Client sends nothing except view subscriptions;
-all mutations use REST (simple, testable, curl-able).
+```json
+{
+  "running": true,
+  "sim_time": 123.4,
+  "utc": 1760000000.0,
+  "signals": [
+    {"name": "aws", "label": "Apparent wind speed", "group": "wind", "layer": "sensor",
+     "unit": "kn", "value": 14.2, "sent": 14.2, "overridden": false, "pgns": [130306]}
+  ],
+  "scenario": { "...": "full Scenario, see config.py" },
+  "output": {
+    "frames_per_s": 118.0,
+    "udp": {"enabled": true, "host": "255.255.255.255", "port": 2002, "bytes_per_s": 5900, "error": null},
+    "tcp": {"enabled": true, "host": "0.0.0.0", "port": 2223, "clients": 1, "bytes_per_s": 5900, "error": null},
+    "recorder": {"enabled": false, "path": null},
+    "pgns": [{"id": "130306.apparent", "pgn": 130306, "name": "Wind (apparent)", "enabled": true,
+              "interval_s": 0.1, "frames_per_s": 10.0, "last_hex": "00 6A 01 ..."}]
+  }
+}
+```
+
+- `value` = simulated value, `sent` = value after override (null for env-layer signals).
+- Non-scalar signals (`satellites`) are omitted from `signals`.
+- `unit` is the display label (e.g. "kn", "°", "°C").
+
+### Mutations
+
+| Method | Path | Body | Purpose |
+|---|---|---|---|
+| PATCH | `/api/scenario/{section}` | partial object | sections: wind, current, waves, seabed, boat, autopilot, gps, processor |
+| PATCH | `/api/static` | `{"engine.rpm": 1800, ...}` | static signal values (UI units) |
+| PUT | `/api/overrides/{name}` | `{"value": 25}` | set override (UI units) |
+| DELETE | `/api/overrides/{name}` | – | clear override |
+| PATCH | `/api/output` | `{"udp": {...}, "tcp": {...}, "recorder": true, "source": 35}` | transports (partial) |
+| PATCH | `/api/output/pgns/{id}` | `{"enabled": false, "interval_s": 0.5}` | per-PGN schedule |
+| POST | `/api/wind/gust` | – | gust now |
+| POST | `/api/seabed/shallow` | – | ramp depth to 3 m for 60 s |
+| POST | `/api/autopilot/tack` · `/gybe` | – | flip TWA sign (twa mode) or mirror heading through the wind |
+| POST | `/api/autopilot/adjust` | `{"delta": 10}` | change target heading / TWA by delta degrees |
+| POST | `/api/log/reset_trip` | – | |
+| POST | `/api/sim/pause` · `/resume` · `/reset` | – | run control; reset restarts from the current scenario |
+| GET / PUT | `/api/scenario` | Scenario | download / load whole scenario |
+| GET | `/api/polar` | – | `{"name": "...", "tws": [..kn], "twa": [..deg], "speed": [[..kn]]}` rows = twa |
+| PUT | `/api/polar` | text/plain .pol | upload & activate polar |
+
+All mutations return `{"ok": true}` or HTTP 400 with `{"detail": "..."}`.
+
+### WebSocket `/ws`
+
+Server → client: `{"type": "state", ...}` (4 Hz), `{"type": "raw", "lines": ["..."]}` (≤ 5 Hz,
+only after the client subscribed). Client → server: `{"subscribe": "raw"}` / `{"unsubscribe": "raw"}`.

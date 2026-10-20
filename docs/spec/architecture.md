@@ -59,24 +59,21 @@ n2k-sim/
 │   ├── heel_table.json                 heel lookup by AWS × AWA
 │   └── scenarios/default.json          default scenario
 ├── src/n2k_sim/
-│   ├── __main__.py                     CLI: python -m n2k_sim [--config …]
-│   ├── app.py                          wires everything, owns the asyncio loop
-│   ├── config.py                       pydantic settings + scenario model, load/save
-│   ├── clock.py                        sim time, pause, deterministic seed
-│   ├── units.py                        conversions (kn↔m/s, deg↔rad, °C↔K, …)
-│   ├── geo.py                          angle wrap, vector add, great-circle step
-│   ├── environment/  wind.py current.py waves.py seabed.py state.py        (tier 1)
-│   ├── boat/         polar.py heel.py leeway.py autopilot.py motion.py
-│   │                 attitude.py engine.py state.py                        (tier 2)
-│   ├── sensors/      base.py (DeviceSpec) gps.py compass.py wind_sensor.py speed_log.py
-│   │                 depth_sounder.py rudder.py engine.py tanks.py battery.py weather.py (tier 3)
-│   ├── calc/         wind.py current.py performance.py meteo.py
-│   ├── signals/      catalogue.py registry.py overrides.py
-│   ├── n2k/          canid.py fastpacket.py gateway.py scheduler.py
-│   │   └── pgns/     one module per PGN group: nav.py wind.py env.py engine.py tanks.py system.py
-│   ├── formats/      ydraw.py (Format protocol)
-│   ├── transport/    udp.py tcp.py recorder.py (Transport protocol)
-│   └── web/          api.py ws.py  static/ index.html app.js gauge.js style.css
+│   ├── __main__.py                     CLI: python -m n2k_sim [--scenario …]
+│   ├── app.py                          Runtime: main loop, transports, state for the UI, mutations
+│   ├── simulation.py                   one tick: tier 1 → 2 → 3 → processor → overrides
+│   ├── config.py                       pydantic Scenario (human units), load/save
+│   ├── units.py · geo.py               conversions, angle/vector helpers, bilinear lookup
+│   ├── environment/  model.py wind.py state.py                              (tier 1)
+│   ├── boat/         model.py (motion, autopilot, heel, leeway, attitude) tables.py (polar, heel)  (tier 2)
+│   ├── sensors/      devices.py (one function per device type, DeviceSpec registry)            (tier 3)
+│   ├── calc/         processor.py (true/ground wind, leeway, set & drift, VMG, polar %, dew point)
+│   ├── signals/      catalogue.py
+│   ├── n2k/          types.py fields.py canid.py fastpacket.py gateway.py
+│   │   └── pgns/     system gps compass wind log steering processor engine tanks battery environment
+│   ├── formats/      ydraw.py
+│   ├── transport/    net.py (UDP, TCP, recorder)
+│   └── web/          api.py  static/ (index.html app.js api.js gauge.js ui.js mock.js style.css)
 └── tests/            mirrors src/n2k_sim
 ```
 

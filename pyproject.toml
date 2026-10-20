@@ -1,0 +1,25 @@
+[project]
+name = "n2k-sim"
+version = "0.1.0"
+description = "NMEA 2000 sailing yacht simulator streaming YD RAW over UDP/TCP, with a web UI"
+requires-python = ">=3.11"
+dependencies = ["fastapi>=0.110", "uvicorn>=0.29", "websockets>=12", "pydantic>=2.6"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "httpx>=0.27"]
+
+[project.scripts]
+n2k-sim = "n2k_sim.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+n2k_sim = ["web/static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

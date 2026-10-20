@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>N2K Simulator</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header id="topbar">
+  <div class="brand">N2K&nbsp;Sim</div>
+  <div class="ctl">
+    <button id="btn-run" class="btn primary" title="Run / pause">&#9654; Run</button>
+    <button id="btn-reset" class="btn" title="Reset simulation">&#8634; Reset</button>
+  </div>
+  <div class="stat"><span class="k">Sim time</span><span id="t-sim" class="v">00:00:00</span></div>
+  <div class="stat"><span class="k">Frames/s</span><span id="t-fps" class="v">0</span></div>
+  <div class="stat"><span class="k">TCP clients</span><span id="t-clients" class="v">0</span></div>
+  <div class="spacer"></div>
+  <button id="btn-save" class="btn" title="Download scenario as JSON">Save scenario</button>
+  <button id="btn-load" class="btn" title="Load scenario from JSON file">Load scenario</button>
+  <input id="file-load" type="file" accept=".json,application/json" hidden>
+  <div id="conn" class="conn off" title="WebSocket connection"><span class="dot"></span><span id="conn-text">offline</span></div>
+</header>
+<div id="layout">
+  <nav id="nav"></nav>
+  <main id="main"></main>
+</div>
+<div id="toasts"></div>
+<script type="module" src="/static/app.js"></script>
+</body>
+</html>
