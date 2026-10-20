@@ -281,7 +281,12 @@ Checked against `ttlappalainen/NMEA2000` (commit 8d101b3) and `ttlappalainen/NME
   `COG-=Variation` treat variation as west positive, while line 163 `MCOG = COG-Variation` treats it
   as east positive. It also passes the *true* heading into HDG's magnetic-heading field.
 - The SH-wg firmware copied lines 96/HDG from this example; the wellenvogel gateway does it right
-  (`Heading+=Variation`). NMEA Dashboard's 127250 decoder and, judging by its display, qtVLM
-  subtract as well.
+  (`Heading+=Variation`). NMEA Dashboard's 127250 decoder subtracts as well.
+- **qtVLM** does not subtract: it takes variation from a configurable source (forced value, RMC
+  sentence, or World Magnetic Model — *Boat → Boat settings → Variation*). On a pure N2K stream
+  there is no RMC, so with "from RMC" it applies no variation and treats the magnetic 127250
+  heading as true (confirmed by test: with simulator variation = 0 its current matches). Use WMM
+  or a forced value in qtVLM. Other software (e.g. TimeZero) reads variation only from the
+  127250 variation field, not from 127258.
 
 The simulator follows the documented convention: east positive, true = magnetic + variation.
