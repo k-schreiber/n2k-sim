@@ -219,8 +219,12 @@ Not decoded by NMEA Dashboard. Verify against canboat before relying on it.
 ### 130306 Wind Data — single [APP]
 | 0 | u8 | SID | 1 | u16 | speed 0.01 m/s | 3 | u16 | angle 0.0001 rad (0..2π) | 5 | u8 | bits 0–2 reference | 6 | reserved |
 
-Reference: 0 true ground-referenced to north (→ TWD), 1 magnetic ground-referenced,
-2 apparent (→ AWA/AWS), 3 true boat-referenced (→ TWA/TWS), 4 true water-referenced.
+Reference (ttlappalainen `tN2kWindReference`, N2kTypes.h:252): 0 ground referenced to true north
+(from COG/SOG), 1 ground referenced to magnetic north, 2 apparent, 3 ground referenced to the
+centreline (from COG/SOG), 4 water referenced to the centreline (from heading/STW).
+The simulator sends 2 (AWA/AWS), 4 (instrument TWA/TWS), 3 (ground wind angle/speed) and
+0 (ground wind direction/speed). ⚠ NMEA Dashboard decodes ref 3 as TWA and ignores the angle of
+ref 4.
 Boat-relative angles are encoded 0..2π (port side = 2π − |angle|).
 
 ### 130310 Environmental Parameters (obsolete) — single [APP]

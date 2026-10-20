@@ -15,6 +15,7 @@ D = math.radians
 
 SIGNALS = {
     "awa": D(-35.0), "aws": 7.2, "twa": D(-120.0), "tws": 6.1, "twd": D(250.0),
+    "gws": 6.4, "gwa": D(-110.0), "gwd": D(260.0),
     "heading_mag": D(123.4), "rot": D(1.5) / 60, "yaw": D(123.4), "pitch": D(-2.0), "roll": D(15.0),
     "rudder": D(-5.5), "stw": 3.4, "log_total": 1234567.0, "log_trip": 5432.0,
     "water_temp": 288.15, "depth": 12.34, "depth_offset": -1.8,

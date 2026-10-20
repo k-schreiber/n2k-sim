@@ -24,7 +24,7 @@ class Processor:
 
     def step(self, r: Mapping[str, Any], dt: float, leeway_k: float) -> dict[str, Any]:
         out: dict[str, Any] = dict.fromkeys(
-            ("heading_true", "leeway_calc", "tws", "twa", "twd", "gws", "gwd", "current_set",
+            ("heading_true", "leeway_calc", "tws", "twa", "twd", "gws", "gwa", "gwd", "current_set",
              "current_drift", "vmg_wind", "polar_speed", "performance", "dew_point")
         )
         out["dew_point"] = dew_point(r.get("air_temp"), r.get("humidity"))
@@ -55,7 +55,7 @@ class Processor:
         if sog is not None and cog is not None:
             if aws is not None and awa is not None:
                 gws, gwa = true_wind(aws, awa, sog, geo.wrap_pi(cog - hdg))
-                out.update(gws=gws, gwd=geo.wrap_2pi(hdg + gwa))
+                out.update(gws=gws, gwa=gwa, gwd=geo.wrap_2pi(hdg + gwa))
             raw = geo.sub(geo.vector(sog, cog), geo.vector(stw, hdg + lw))
             if self._current is None:
                 self._current = raw

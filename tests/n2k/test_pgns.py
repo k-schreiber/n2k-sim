@@ -38,11 +38,12 @@ def wrap(a):
 
 def test_schedule():
     ids = set(SPECS)
-    assert {"130306.apparent", "130306.true", "130306.ground"} <= ids
+    assert {"130306.apparent", "130306.water", "130306.ground_boat", "130306.ground"} <= ids
     assert "60928" not in ids and len(default_pgns()) == len(ids)
     assert {s.pgn for s in SPECS.values() if s.fast_packet} == {127489, 128275, 129029, 129540}
     assert not SPECS["130310"].enabled and SPECS["130311"].enabled
-    assert SPECS["130306.apparent"].interval_s == 0.1 and SPECS["127258"].priority == 7
+    assert SPECS["130306.apparent"].interval_s == 0.1 and SPECS["127258"].priority == 6
+    assert SPECS["129540"].interval_s == 1.0 and SPECS["130311"].interval_s == 0.5
     assert {s.sensor for s in SPECS.values()} <= {
         "gps", "compass", "wind_sensor", "speed_log", "depth_sounder", "rudder", "engine",
         "tanks", "battery", "weather", "processor", "gateway"}
@@ -91,7 +92,7 @@ def test_address_claim_golden():
     got = system.address_claim(name)
     low = int.from_bytes(got[:4], "little")
     assert low & 0x1FFFFF == 0x12345 and low >> 21 == 2046
-    assert got[4:] == bytes([0, 136, 25 << 1 | 1, 0xC0])
+    assert got[4:] == bytes([0, 136, 25 << 1, 0xC0])  # reserved bit 0 = 0, as in the library
 
 
 # ---- gps ----------------------------------------------------------------------------------
@@ -120,7 +121,7 @@ def test_129029(run, signals):
     close(d["lat"], 54.123456, 1e-9)
     close(d["lon"], -10.654321, 1e-9)
     close(d["altitude"], 12.5, 1e-6)
-    assert d["type_method"] == 0x10 and d["integrity"] & 3 == 0 and d["sats"] == 9
+    assert d["type_method"] == 0x10 and d["integrity"] & 3 == 1 and d["sats"] == 9
     close(d["hdop"], 0.9, 0.01)
     close(d["pdop"], 1.5, 0.01)
     close(d["geoid"], 44.3, 0.01)
@@ -129,7 +130,7 @@ def test_129029(run, signals):
 
 def test_129539(run, signals):
     _, d = one(run, "129539", signals)
-    assert d["mode"] & 7 == 2 and (d["mode"] >> 3) & 7 == 2
+    assert d["mode"] & 7 == 3 and (d["mode"] >> 3) & 7 == 2  # desired auto, actual 3D
     close(d["hdop"], 0.9, 0.01)
     close(d["vdop"], 1.2, 0.01)
     close(d["tdop"], 1.1, 0.01)
@@ -137,7 +138,7 @@ def test_129539(run, signals):
 
 def test_129540(run, signals):
     payload, d = one(run, "129540", signals)
-    assert d["length"] == 27 and d["n"] == 2
+    assert d["length"] == 27 and d["n"] == 2 and payload[1] == 0xFF  # residual mode unavailable
     s0, s1 = d["sats"]
     assert s0["prn"] == 5 and s0["status"] == 2 and s0["residual"] is None
     close(s0["elevation"], D(45), 1e-4)
@@ -161,7 +162,7 @@ def test_129540_many_sats_truncated(signals):
 
 def test_127258(run, signals):
     _, d = one(run, "127258", signals)
-    assert d["source"] & 0x0F == 8 and d["age"] is None
+    assert d["source"] & 0x0F == 8 and d["age"] == 19675
     close(d["variation"], D(4.5), 1e-4)
 
 
@@ -210,18 +211,25 @@ def test_wind_apparent(run, signals):
     close(d["speed"], 7.2, 0.01)
 
 
-def test_wind_true_boat(run, signals):
-    _, d = one(run, "130306.true", signals)
-    assert d["reference"] == 3
+def test_wind_true_water(run, signals):
+    _, d = one(run, "130306.water", signals)
+    assert d["reference"] == 4  # water referenced (heading/STW), N2kWind_True_water
     close(d["angle"], wrap(D(-120)), 1e-4)
     close(d["speed"], 6.1, 0.01)
 
 
+def test_wind_ground_boat(run, signals):
+    _, d = one(run, "130306.ground_boat", signals)
+    assert d["reference"] == 3  # ground referenced to the centreline (COG/SOG), N2kWind_True_boat
+    close(d["angle"], wrap(D(-110)), 1e-4)
+    close(d["speed"], 6.4, 0.01)
+
+
 def test_wind_ground(run, signals):
     _, d = one(run, "130306.ground", signals)
-    assert d["reference"] == 0
-    close(d["angle"], D(250), 1e-4)
-    close(d["speed"], 6.1, 0.01)
+    assert d["reference"] == 0  # ground referenced to true north (COG/SOG), N2kWind_True_North
+    close(d["angle"], D(260), 1e-4)
+    close(d["speed"], 6.4, 0.01)
 
 
 def test_wind_golden():
@@ -266,6 +274,8 @@ def test_127245(run, signals):
     _, d = one(run, "127245", signals)
     close(d["position"], D(-5.5), 1e-4)
     assert d["order"] is None
+    payload, _ = one(run, "127245", signals)
+    assert payload[1] == 0xF8  # "no direction order", as the library writes
 
 
 def test_129291(run, signals):

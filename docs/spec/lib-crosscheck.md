@@ -10,6 +10,12 @@ semantics (which value goes into a field), a few header defaults, and cosmetics.
 
 ## Fix list
 
+**Status (2026-10-21):** A1, A2, B1–B4, C1–C4, D2, D3 and D5 are applied. D1 (127257 at 100 ms)
+and D4 (periodic address claim) are kept by decision. With D5, tank instances are fuel 0, fresh
+water 1 and 2, black water 3. NMEA Dashboard maps fresh water instances 0/1 to its "water 1/2"
+levels, so it now shows fresh water tank 1 (instance 1) as "water 2" and doesn't show tank 2
+(instance 2) at all.
+
 ### A. Wrong values / semantics on the wire
 
 | # | PGN | Now | Library | Fix |

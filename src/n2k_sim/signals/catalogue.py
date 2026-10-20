@@ -94,11 +94,12 @@ SIGNALS: tuple[SignalDef, ...] = (
     # --- Instrument processor -----------------------------------------------------------------
     _s("heading_true", "deg360", C, "processor", "True heading"),
     _s("leeway_calc", "deg180", C, "processor", "Leeway (calculated)"),
-    _s("tws", "kn", C, "processor", "True wind speed", 130306),
-    _s("twa", "deg180", C, "processor", "True wind angle", 130306),
-    _s("twd", "deg360", C, "processor", "True wind direction", 130306),
-    _s("gws", "kn", C, "processor", "Ground wind speed"),
-    _s("gwd", "deg360", C, "processor", "Ground wind direction"),
+    _s("tws", "kn", C, "processor", "True wind speed (water)", 130306),
+    _s("twa", "deg180", C, "processor", "True wind angle (water)", 130306),
+    _s("twd", "deg360", C, "processor", "True wind direction (water)"),
+    _s("gws", "kn", C, "processor", "Ground wind speed", 130306),
+    _s("gwa", "deg180", C, "processor", "Ground wind angle", 130306),
+    _s("gwd", "deg360", C, "processor", "Ground wind direction", 130306),
     _s("current_set", "deg360", C, "processor", "Current set", 129291),
     _s("current_drift", "kn", C, "processor", "Current drift", 129291),
     _s("vmg_wind", "kn", C, "processor", "VMG to wind"),
@@ -138,10 +139,11 @@ SIGNALS: tuple[SignalDef, ...] = (
 BY_NAME: dict[str, SignalDef] = {s.name: s for s in SIGNALS}
 
 # Tank and battery instances: (signal prefix, N2K instance, fluid type for 127505).
+# Instances are unique across all tanks, as the NMEA2000 library recommends.
 TANKS: tuple[tuple[str, int, int], ...] = (
     ("tank.fuel", 0, 0),
-    ("tank.fresh_water1", 0, 1),
-    ("tank.fresh_water2", 1, 1),
-    ("tank.black_water", 0, 5),
+    ("tank.fresh_water1", 1, 1),
+    ("tank.fresh_water2", 2, 1),
+    ("tank.black_water", 3, 5),
 )
 BATTERIES: tuple[tuple[str, int], ...] = (("battery.house", 0), ("battery.engine", 1))

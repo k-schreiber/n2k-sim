@@ -26,7 +26,7 @@ added later inside `n2k/gateway.py` without touching sensors or encoders.
 | 127250 | Vessel Heading | 100 ms | 2 | single |
 | 127251 | Rate of Turn | 100 ms | 2 | single |
 | 127257 | Attitude | 100 ms | 3 | single |
-| 127258 | Magnetic Variation | 1 s | 7 | single |
+| 127258 | Magnetic Variation | 1 s | 6 | single |
 | 127488 | Engine Rapid | 100 ms | 2 | single |
 | 127489 | Engine Dynamic | 500 ms | 2 | fast (26 B) |
 | 127505 | Fluid Level (per tank) | 2.5 s | 6 | single |
@@ -40,11 +40,13 @@ added later inside `n2k/gateway.py` without touching sensors or encoders.
 | 129033 | Time & Date | 1 s | 3 | single |
 | 129291 | Set & Drift | 1 s | 3 | single |
 | 129539 | GNSS DOPs | 1 s | 6 | single |
-| 129540 | GNSS Satellites in View | 5 s | 6 | fast (3 + 12 × n B) |
+| 129540 | GNSS Satellites in View | 1 s | 6 | fast (3 + 12 × n B) |
 | 130306 | Wind (apparent) | 100 ms | 2 | single |
-| 130306 | Wind (true boat-ref, ground-ref) | 1 s each | 2 | single |
-| 130310 | Environmental (obsolete) | 2 s, **off** by default | 5 | single |
-| 130311 | Environmental | 2 s | 5 | single |
+| 130306 | Wind ref 4: true, water referenced (TWA/TWS from heading/STW) | 1 s | 2 | single |
+| 130306 | Wind ref 3: ground referenced to the centreline (from COG/SOG) | 1 s | 2 | single |
+| 130306 | Wind ref 0: ground referenced to true north (from COG/SOG) | 1 s | 2 | single |
+| 130310 | Environmental (obsolete) | 500 ms, **off** by default | 5 | single |
+| 130311 | Environmental | 500 ms | 5 | single |
 | 130312 | Temperature (water) | 2 s | 5 | single |
 | 130313 | Humidity | 2 s | 5 | single |
 | 130314 | Actual Pressure | 2 s | 5 | single |

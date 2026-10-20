@@ -18,7 +18,7 @@ def address_claim(name: Mapping[str, Any]) -> bytes:
     low = (int(name.get("unique_number", 0)) & 0x1FFFFF) | (
         (int(name.get("manufacturer_code", 0)) & 0x7FF) << 21
     )
-    byte6 = ((int(name.get("device_class", 0)) & 0x7F) << 1) | 1
+    byte6 = (int(name.get("device_class", 0)) & 0x7F) << 1
     byte7 = (
         (int(name.get("system_instance", 0)) & 0x0F)
         | ((int(name.get("industry_group", 4)) & 0x07) << 4)

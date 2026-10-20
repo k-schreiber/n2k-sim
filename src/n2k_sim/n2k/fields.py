@@ -12,8 +12,8 @@ import struct
 
 TWO_PI = 2.0 * math.pi
 RESERVED_BYTE = 0xFF
-# The top three codes of every field are reserved (error/out of range/not available).
-_MARGIN = 3
+# As in the ttlappalainen library (N2kMsg.cpp SetBuf…Double): the maximum code means "not
+# available" and the one below it "out of range"; values outside the field range get that code.
 
 
 def reserved(n: int = 1) -> bytes:
@@ -22,7 +22,8 @@ def reserved(n: int = 1) -> bytes:
 
 
 def _round(x: float) -> int:
-    return math.floor(x + 0.5)
+    """Rounds half away from zero, like C's round()."""
+    return int(math.copysign(math.floor(abs(x) + 0.5), x))
 
 
 def _pack_int(value, scale: float, bits: int, signed: bool, fmt: str) -> bytes:
@@ -35,7 +36,10 @@ def _pack_int(value, scale: float, bits: int, signed: bool, fmt: str) -> bytes:
     if value is None or not math.isfinite(value):
         raw = na
     else:
-        raw = max(lo, min(na - _MARGIN, _round(value / scale)))
+        raw = _round(value / scale)
+        if raw < lo or raw >= na - 1:
+            raw = na - 1  # out of range
+
     if size == 3:
         return (raw & 0xFFFFFF).to_bytes(3, "little")
     return struct.pack("<" + fmt, raw)

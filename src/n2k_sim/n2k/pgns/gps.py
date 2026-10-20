@@ -10,6 +10,9 @@ from ..types import Signals
 MAX_SATS = 18  # (223 - 3) // 12
 
 
+DOP_MODE_AUTO = 3  # tN2kGNSSDOPmode
+
+
 def _sid(sid: int) -> bytes:
     return bytes([sid & 0xFF])
 
@@ -33,7 +36,8 @@ def _nibbles(low, high) -> bytes:
 def encode_129029(s: Signals, sid: int) -> list[bytes]:
     """GNSS position data (43 bytes, no reference stations)."""
     t = s.get("gnss_time")
-    integrity = int(s.get("integrity") or 0) & 3
+    integrity = s.get("integrity")
+    integrity = 1 if integrity is None else int(integrity) & 3  # 1 = safe, as the library sends
     sats = s.get("sats_used")
     return [
         _sid(sid)
@@ -53,9 +57,9 @@ def encode_129029(s: Signals, sid: int) -> list[bytes]:
 
 
 def encode_129539(s: Signals, sid: int) -> list[bytes]:
-    """GNSS DOPs; desired and actual mode both carry `fix_mode` (2 = 3D)."""
+    """GNSS DOPs; desired mode = auto (3), actual mode = `fix_mode` (2 = 3D)."""
     mode = s.get("fix_mode")
-    byte1 = 0xFF if mode is None else (int(mode) & 7) | ((int(mode) & 7) << 3) | 0xC0
+    byte1 = 0xFF if mode is None else DOP_MODE_AUTO | ((int(mode) & 7) << 3) | 0xC0
     return [
         _sid(sid)
         + bytes([byte1])
@@ -83,9 +87,16 @@ def encode_129540(s: Signals, sid: int) -> list[bytes]:
     if sats is None:
         return []
     sats = list(sats)[:MAX_SATS]
-    return [_sid(sid) + b"\xfc" + bytes([len(sats)]) + b"".join(_satellite(x) for x in sats)]
+    # Range residual mode 3 = unavailable: the residual fields are not available.
+    return [_sid(sid) + b"\xff" + bytes([len(sats)]) + b"".join(_satellite(x) for x in sats)]
 
 
 def encode_127258(s: Signals, sid: int) -> list[bytes]:
-    """Magnetic variation (east positive), source 8 = WMM."""
-    return [_sid(sid) + b"\xf8" + f.u16(None) + f.i16(s.get("variation"), 1e-4) + f.reserved(2)]
+    """Magnetic variation (east positive), source 8 = WMM2020, age of service = GNSS date."""
+    return [
+        _sid(sid)
+        + b"\xf8"
+        + f.date_u16(s.get("gnss_time"))
+        + f.i16(s.get("variation"), 1e-4)
+        + f.reserved(2)
+    ]

@@ -29,10 +29,16 @@ def test_sentinels():
 def test_rounding_and_clamping():
     assert f.u16(1.2345, 0.0001) == (12345).to_bytes(2, "little")
     assert f.i16(-0.5, 0.01) == (-50).to_bytes(2, "little", signed=True)
-    assert f.u16(-5) == b"\x00\x00"
-    assert int.from_bytes(f.u16(1e9), "little") < 0xFFFD
-    assert int.from_bytes(f.i16(1e9), "little", signed=True) < 0x7FFD
-    assert int.from_bytes(f.i16(-1e9), "little", signed=True) == -0x8000
+    # Out of range (too low or too high) -> the library's out-of-range code (NA - 1).
+    assert f.u16(-5) == b"\xfe\xff"
+    assert f.u16(1e9) == b"\xfe\xff"
+    assert f.i16(1e9) == b"\xfe\x7f"
+    assert f.i16(-1e9) == b"\xfe\x7f"
+    assert int.from_bytes(f.i16(-32768), "little", signed=True) == -32768
+    assert f.u8(300) == b"\xfe"
+    # Rounding half away from zero, like C round().
+    assert f.i16(-0.5) == (-1).to_bytes(2, "little", signed=True)
+    assert f.u16(2.5) == (3).to_bytes(2, "little")
     assert f.u24(1.0, 0.001) == (1000).to_bytes(3, "little")
     assert f.i32(-1, 1e-7) == (-10_000_000).to_bytes(4, "little", signed=True)
 

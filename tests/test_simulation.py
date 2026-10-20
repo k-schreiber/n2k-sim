@@ -193,3 +193,12 @@ def test_wave_period_drives_wavelength_and_old_files_load():
     _, snap = run(s, 1)
     assert snap.values["env.wave_period"] == 8.0
     assert snap.values["env.wave_length"] == pytest.approx(99.9, abs=0.2)
+
+
+def test_ground_wind_matches_environment():
+    """130306 refs 0/3 carry the ground wind: it must equal the simulated wind over ground."""
+    _, snap = run(Scenario(), 300)
+    v = snap.values
+    assert ms_to_kn(v["gws"]) == pytest.approx(ms_to_kn(v["env.gws"]), abs=0.05)
+    assert math.degrees(geo.wrap_pi(v["gwd"] - v["env.gwd"])) == pytest.approx(0, abs=0.2)
+    assert math.degrees(geo.wrap_pi(v["gwd"] - v["heading_true"] - v["gwa"])) == pytest.approx(0, abs=1e-6)
