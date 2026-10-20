@@ -255,6 +255,8 @@ const boat = (() => {
         { key: 'stw_time_constant_s', label: 'STW time constant', min: 1, max: 30, step: 0.5, unit: 's' },
         { key: 'max_turn_rate', label: 'Max turn rate', min: 1, max: 20, step: 0.5, unit: '°/s' },
         { key: 'motor_speed_per_1000rpm', label: 'Motor speed / 1000 rpm', min: 0.5, max: 6, step: 0.1, unit: 'kn' },
+        { key: 'sail_roll_damping', label: 'Sail roll damping (full load)', min: 0, max: 1, step: 0.05, unit: '', hint: 'wave roll factor when sails are fully loaded; 1 = no damping' },
+        { key: 'sail_damping_aws_ref', label: 'Full sail load at AWS', min: 1, max: 40, step: 0.5, unit: 'kn' },
       ]);
       const proc = sectionCard('Instrument processor', 'processor', [
         { key: 'leeway_k', label: 'Leeway K (instruments)', min: 0, max: 30, step: 0.1, unit: '' },

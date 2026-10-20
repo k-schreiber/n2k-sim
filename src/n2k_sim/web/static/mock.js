@@ -58,7 +58,7 @@ const scenario = {
   current: { fixed: true, set: 135, drift: 0.5, tidal_amplitude_pct: 50, tidal_period_h: 12.42 },
   waves: { enabled: true, direction: 290, height: 1, period: 5, irregularity: 0.2 },
   seabed: { fixed: false, depth: 20, depth_min: 12, depth_max: 35, change_period_min: 5, transducer_depth: 0.5, keel_depth: 1.8 },
-  boat: { lat: 43.48, lon: 16.4, polar_file: 'mock_cruiser_40.pol', leeway_k: 10, stw_time_constant_s: 8, max_turn_rate: 6, motor_speed_per_1000rpm: 2.6 },
+  boat: { lat: 43.48, lon: 16.4, polar_file: 'mock_cruiser_40.pol', leeway_k: 10, stw_time_constant_s: 8, max_turn_rate: 6, motor_speed_per_1000rpm: 2.6, sail_roll_damping: 0.35, sail_damping_aws_ref: 15 },
   autopilot: { mode: 'twa', heading: 0, twa: -45, rpm: 2200 },
   gps: { variation: 4.5, altitude: 2, geoidal_separation: 45, local_offset_min: 120, hdop: 0.8, vdop: 1.2, pdop: 1.4, tdop: 0.9, sats_used: 12, sats_in_view: 14 },
   processor: { leeway_k: 10 },

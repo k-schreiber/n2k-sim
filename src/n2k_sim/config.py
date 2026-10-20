@@ -72,6 +72,10 @@ class Boat(BaseModel):
     stw_time_constant_s: float = 8.0
     max_turn_rate: float = 6.0  # deg/s
     motor_speed_per_1000rpm: float = 2.6  # kn per 1000 rpm
+    # Sail damping of wave-induced roll: factor at full sail load (1 = none) and the apparent wind
+    # speed at which the sails count as fully loaded. No sail damping while motoring.
+    sail_roll_damping: float = 0.35
+    sail_damping_aws_ref: float = 15.0  # kn
 
 
 class Autopilot(BaseModel):

@@ -130,7 +130,8 @@ class Boat:
         self._log_trip += self._stw * dt
 
         yaw = self._yaw
-        roll = max(-MAX_ROLL, min(MAX_ROLL, self._heel + roll_w))
+        damping = sail_roll_damping(aws, motoring, cfg.boat.sail_roll_damping, cfg.boat.sail_damping_aws_ref)
+        roll = max(-MAX_ROLL, min(MAX_ROLL, self._heel + damping * roll_w))
         heading_wave = geo.wrap_2pi(self._heading + yaw)
         rot = 0.0 if self._last_heading_wave is None else geo.wrap_pi(heading_wave - self._last_heading_wave) / dt
         self._last_heading_wave = heading_wave
@@ -206,3 +207,16 @@ def leeway(heel: float, stw: float, k: float, motoring: bool) -> float:
         return 0.0
     deg = k * math.degrees(heel) / (stw_kn * stw_kn)
     return math.radians(max(-MAX_LEEWAY, min(MAX_LEEWAY, deg)))
+
+
+def sail_roll_damping(aws: float, motoring: bool, f_min: float, aws_ref_kn: float) -> float:
+    """Factor (f_min..1) applied to the wave-induced roll: loaded sails resist rolling.
+
+    Sail load grows with apparent wind speed up to `aws_ref_kn`; with the engine on the sails are
+    down and the roll is undamped.
+    """
+    if motoring:
+        return 1.0
+    load = min(ms_to_kn(aws) / max(aws_ref_kn, 0.1), 1.0)
+    f_min = max(0.0, min(f_min, 1.0))
+    return 1.0 - (1.0 - f_min) * load

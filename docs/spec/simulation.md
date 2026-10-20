@@ -119,6 +119,11 @@ UI helpers: "Tack", "Gybe" (flip TWA sign), "+1°/−1°/+10°/−10°" heading 
   **leeward**: wind from starboard → λ < 0 (course through water is to port of the heading).
   Typical result: 20° heel at 6 kn → ≈ 5.6° leeway; downwind (small heel) ≈ 0°.
 - **Roll** = heel + `A_roll · sin(ωe t + φ_r)`, `A_roll = α · |sin μ| · c_roll` (`c_roll = 1.2`).
+- **Sail damping of wave roll:** loaded sails resist rolling, so the wave part of the roll is
+  scaled by `d = 1 − (1 − f_min) · load` with `load = min(AWS / AWS_ref, 1)` when sailing and
+  `load = 0` when motoring (sails down). Defaults `f_min = 0.35`, `AWS_ref = 15 kn` (Boat view).
+  The steady heel is unaffected. Example at 1 m / 5 s beam sea: upwind ±1.9°, running ±4°,
+  motoring ±5.4°.
 - **Pitch** = `A_pitch · sin(ωe t + φ_p)`, `A_pitch = α · |cos μ| · c_pitch` (`c_pitch = 0.8`).
 - **Yaw** (127257) = heading (yaw angle reported by the attitude sensor = true heading, small
   wave-induced oscillation ±1–2° added to heading itself). The wave yaw turns the **whole hull**:

@@ -202,3 +202,33 @@ def test_ground_wind_matches_environment():
     assert ms_to_kn(v["gws"]) == pytest.approx(ms_to_kn(v["env.gws"]), abs=0.05)
     assert math.degrees(geo.wrap_pi(v["gwd"] - v["env.gwd"])) == pytest.approx(0, abs=0.2)
     assert math.degrees(geo.wrap_pi(v["gwd"] - v["heading_true"] - v["gwa"])) == pytest.approx(0, abs=1e-6)
+
+
+def test_sail_roll_damping_factor():
+    from n2k_sim.boat.model import sail_roll_damping
+
+    assert sail_roll_damping(kn_to_ms(20), True, 0.35, 15) == 1.0  # motoring: sails down
+    assert sail_roll_damping(kn_to_ms(20), False, 0.35, 15) == pytest.approx(0.35)
+    assert sail_roll_damping(kn_to_ms(7.5), False, 0.35, 15) == pytest.approx(0.675)
+    assert sail_roll_damping(0.0, False, 0.35, 15) == 1.0
+
+
+def _wave_roll_amplitude(**autopilot) -> float:
+    s = Scenario()
+    s.wind.fixed = True
+    for k, v in autopilot.items():
+        setattr(s.autopilot, k, v)
+    sim = Simulation(s, clock=lambda: 1_760_000_000.0)
+    amp = 0.0
+    for i in range(1500):
+        v = sim.step(0.1).values
+        if i > 600:
+            amp = max(amp, abs(v["roll"] - v["boat.heel"]))
+    return math.degrees(amp)
+
+
+def test_sails_damp_wave_roll_upwind_but_not_under_motor():
+    # Same heading relative to the waves (waves from 290°): 245° true heading in both cases.
+    upwind = _wave_roll_amplitude(mode="twa", twa=55.0)  # TWD 300 -> heading 245
+    motoring = _wave_roll_amplitude(mode="motor", heading=245.0, rpm=2500.0)
+    assert upwind < 0.5 * motoring
