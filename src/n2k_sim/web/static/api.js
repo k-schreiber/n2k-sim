@@ -25,10 +25,11 @@ export async function api(method, path, body) {
 
 /** WebSocket with exponential backoff reconnect and a stale-connection watchdog. */
 export class Socket {
-  constructor({ onState, onRaw, onStatus }) {
+  constructor({ onState, onRaw, onStatus, onMotion }) {
     this.onState = onState || (() => {});
     this.onRaw = onRaw || (() => {});
     this.onStatus = onStatus || (() => {});
+    this.onMotion = onMotion || null;
     this.subs = new Set();
     this.attempt = 0;
     this.ws = null;

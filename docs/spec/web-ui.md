@@ -16,6 +16,10 @@ Left navigation with six views:
 - Tiles: STW, SOG, COG, depth, heel/pitch, rudder, VMG, polar %, engine RPM.
 - Sparklines (last 10 min): TWD, TWS (with gusts visible), STW.
 - Autopilot quick controls: mode, target, ±1/±10, Tack/Gybe.
+- **3D view** (`boat3d.js`, plain WebGL, no libraries): procedural 40 ft yacht that heels, pitches,
+  rolls, yaws and heaves on the sea surface defined in the `motion` contract; sails on the leeward
+  side trimmed by AWA, hidden when motoring; rudder follows the rudder angle. Orbit with drag,
+  zoom with the wheel, double-click resets. Subscribes to `motion` only while the Dashboard is open.
 
 ### 2. Environment
 Three cards — **Wind**, **Current**, **Waves** — each parameter from simulation.md with a slider +

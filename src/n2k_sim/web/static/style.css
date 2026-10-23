@@ -64,6 +64,13 @@ h3 { margin: 0; font-size: 14px; font-weight: 600; letter-spacing: .02em; }
 .ro.cur .v { color: var(--cur); } .ro.wave .v { color: var(--wave); }
 .ro.cur .v, .ro.wave .v { font-size: 16px; }
 
+.view3d { position: relative; height: clamp(260px, 42vh, 420px); overflow: hidden; border-radius: 0 0 8px 8px; }
+.boat3d-canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+.boat3d-canvas:active { cursor: grabbing; }
+.boat3d-hud { position: absolute; left: 10px; top: 8px; font-size: 12px; line-height: 1.5; white-space: pre; color: #10202e; text-shadow: 0 0 3px rgba(255,255,255,.7); pointer-events: none; }
+.boat3d-hint { position: absolute; right: 10px; bottom: 6px; color: #10202e; opacity: .65; pointer-events: none; }
+.boat3d-msg { padding: 24px; text-align: center; }
+
 .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; margin: 14px 0; }
 .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; display: grid; grid-template-columns: 1fr auto; align-items: baseline; }
 .tile .tk { grid-column: 1 / 3; font-size: 11px; text-transform: uppercase; color: var(--dim); }

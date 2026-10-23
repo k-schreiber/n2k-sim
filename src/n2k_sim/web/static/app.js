@@ -4,6 +4,7 @@ import {
   h, fmt, fmtTime, toast, call, numField, textField, switchField, selectField, sectionCard, Spark,
 } from './ui.js';
 import { createWindGauge, createCompass } from './gauge.js';
+import { createBoat3D } from './boat3d.js';
 
 if (new URLSearchParams(location.search).has('mock')) await import('./mock.js');
 
@@ -77,7 +78,7 @@ function buildApQuick() {
 }
 
 const dashboard = (() => {
-  let wind, compass, tiles = [], sparks, ap;
+  let wind, compass, tiles = [], sparks, ap, boat3d;
   const TILES = [
     ['STW', 'kn', () => val('stw'), 2], ['SOG', 'kn', () => val('sog'), 2], ['COG', '°', () => val('cog'), 0],
     ['Depth', 'm', () => val('depth'), 1], ['Heel (roll)', '°', () => val('roll'), 1], ['Pitch', '°', () => val('pitch'), 1],
@@ -104,15 +105,21 @@ const dashboard = (() => {
         ['stw', new Spark(cvs[2], { color: '#7bd88f', label: 'STW', unit: 'kn', dec: 1, minSpan: 2 })],
       ];
       ap = buildApQuick();
+      const view3d = h('div', { class: 'view3d' });
+      boat3d = createBoat3D(view3d);
       root.append(
         h('div', { class: 'dash-top' },
           h('section', { class: 'card' }, h('div', { class: 'card-h' }, h('h3', { text: 'Wind' })), wg),
           h('section', { class: 'card' }, h('div', { class: 'card-h' }, h('h3', { text: 'Compass' })), cg),
           ap.el),
+        h('section', { class: 'card wide' }, h('div', { class: 'card-h' }, h('h3', { text: '3D view' })), view3d),
         h('div', { class: 'tiles' }, tileEls),
         h('section', { class: 'card' }, h('div', { class: 'card-h' }, h('h3', { text: 'Last 10 minutes' })),
           h('div', { class: 'sparks' }, cvs)));
     },
+    motion(m) { if (boat3d) boat3d.update(m); },
+    enter() { socket.subscribe('motion'); boat3d.setActive(true); },
+    leave() { socket.unsubscribe('motion'); boat3d.setActive(false); },
     update(st) {
       const scn = st.scenario || {};
       wind.update({ awa: val('awa'), twa: val('twa'), aws: val('aws'), tws: val('tws'), twd: val('twd') });
@@ -593,6 +600,7 @@ const socket = new Socket({
     if (!raw.dirty && S.view === output) { raw.dirty = true; requestAnimationFrame(output_render); }
   },
   onStatus: setConn,
+  onMotion: (m) => dashboard.motion(m),
 });
 
 function wireTopbar() {

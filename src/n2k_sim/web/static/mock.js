@@ -178,9 +178,26 @@ window.fetch = async (url, opts = {}) => {
   }
 };
 
+// Synthetic `motion` message following docs/spec/web-ui.md: 1 m / 5 s waves from ~40 deg off the bow, ~15 deg heel.
+let mockPhase = 0;
+function motionMsg() {
+  const A0 = scenario.waves.enabled ? scenario.waves.height : 0, per = scenario.waves.period || 5;
+  const A = A0 / 2, len = 1.56 * per * per, k = (2 * Math.PI) / len, f = 1.6, irr = scenario.waves.irregularity, mu = 0.7;
+  mockPhase = (mockPhase + (2 * Math.PI * 0.1) / per) % (2 * Math.PI * 1000);
+  const d = [-Math.cos(mu), -Math.sin(mu)];
+  const a1 = mockPhase, a2 = f * mockPhase + 0.7;
+  const eta = A * (Math.cos(a1) + (irr / f) * Math.cos(a2));
+  const s = A * k * (Math.sin(a1) + irr * Math.sin(a2));      // surface gradient at the boat = s * d
+  const gx = s * d[0], gy = s * d[1];
+  const heel = 0.26;
+  return { type: 'motion', valid: true, t: simT, roll: heel - 0.8 * Math.atan(gy), pitch: 0.8 * Math.atan(gx), heel,
+    yaw_wave: 0.02 * Math.sin(mockPhase / 3), heading: 4.4, leeway: 0.07, rudder: 0.05 * Math.sin(simT / 3), awa: -0.61, aws: 8.1, stw: 3.0, motoring: false,
+    wave: { height: A0, length: len, period: per, mu, phase: mockPhase, irregularity: irr, secondary: f } };
+}
+
 class FakeSocket {
   constructor() {
-    this.readyState = 0; this.raw = false;
+    this.readyState = 0; this.raw = false; this.motion = false;
     setTimeout(() => { this.readyState = 1; this.onopen && this.onopen({}); }, 50);
     this.timer = setInterval(() => {
       if (running) simT += 0.25;
@@ -196,10 +213,11 @@ class FakeSocket {
         this._emit({ type: 'raw', lines });
       }
     }, 250);
+    this.mtimer = setInterval(() => { if (this.motion) this._emit(motionMsg()); }, 100);
   }
   _emit(o) { this.onmessage && this.onmessage({ data: JSON.stringify(o) }); }
-  send(s) { const m = JSON.parse(s); if (m.subscribe === 'raw') this.raw = true; if (m.unsubscribe === 'raw') this.raw = false; }
-  close() { clearInterval(this.timer); this.readyState = 3; this.onclose && this.onclose({}); }
+  send(s) { const m = JSON.parse(s); if (m.subscribe === 'raw') this.raw = true; if (m.unsubscribe === 'raw') this.raw = false; if (m.subscribe === 'motion') this.motion = true; if (m.unsubscribe === 'motion') this.motion = false; }
+  close() { clearInterval(this.timer); clearInterval(this.mtimer); this.readyState = 3; this.onclose && this.onclose({}); }
 }
 window.WebSocket = FakeSocket;
 console.info('[mock] fake backend active');
