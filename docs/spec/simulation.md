@@ -118,13 +118,17 @@ UI helpers: "Tack", "Gybe" (flip TWA sign), "+1°/−1°/+10°/−10°" heading 
   editable), clamped to `0..10°` and set to 0 when `v < 1 kn` or when motoring. The boat slips to
   **leeward**: wind from starboard → λ < 0 (course through water is to port of the heading).
   Typical result: 20° heel at 6 kn → ≈ 5.6° leeway; downwind (small heel) ≈ 0°.
-- **Roll** = heel + `A_roll · sin(ωe t + φ_r)`, `A_roll = α · |sin μ| · c_roll` (`c_roll = 1.2`).
+- **Wave slope:** the sea surface at the boat is `η = A·[cos p + (irr/1.6)·cos(1.6p + 0.7)]` along
+  the wave travel direction (full formula in web-ui.md, `motion`), p = encounter phase advanced
+  with ωe. Its slope factor is `S(p) = sin p + irr·sin(1.6p + 0.7)`.
+- **Roll** = heel + `c_roll · α · sin μ · S(p)` (`c_roll = 1.2`, sign: starboard down when the surface
+  falls to starboard).
 - **Sail damping of wave roll:** loaded sails resist rolling, so the wave part of the roll is
   scaled by `d = 1 − (1 − f_min) · load` with `load = min(AWS / AWS_ref, 1)` when sailing and
   `load = 0` when motoring (sails down). Defaults `f_min = 0.35`, `AWS_ref = 15 kn` (Boat view).
   The steady heel is unaffected. Example at 1 m / 5 s beam sea: upwind ±1.9°, running ±4°,
   motoring ±5.4°.
-- **Pitch** = `A_pitch · sin(ωe t + φ_p)`, `A_pitch = α · |cos μ| · c_pitch` (`c_pitch = 0.8`).
+- **Pitch** = `−c_pitch · α · cos μ · S(p)` (`c_pitch = 0.8`, bow up when the surface rises ahead).
 - **Yaw** (127257) = heading (yaw angle reported by the attitude sensor = true heading, small
   wave-induced oscillation ±1–2° added to heading itself). The wave yaw turns the **whole hull**:
   it is applied to the course through water (and therefore COG/SOG), not only to the compass, so

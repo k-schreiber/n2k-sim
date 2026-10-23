@@ -232,3 +232,23 @@ def test_sails_damp_wave_roll_upwind_but_not_under_motor():
     upwind = _wave_roll_amplitude(mode="twa", twa=55.0)  # TWD 300 -> heading 245
     motoring = _wave_roll_amplitude(mode="motor", heading=245.0, rpm=2500.0)
     assert upwind < 0.5 * motoring
+
+
+def test_wave_attitude_follows_surface_slope():
+    """Wave roll/pitch have the sign of the sea-surface slope the 3D view draws."""
+    from n2k_sim.boat.model import PITCH_FACTOR, ROLL_FACTOR
+
+    s = Scenario()
+    s.wind.fixed = True
+    s.boat.sail_roll_damping = 1.0  # undamped, so roll − heel is the pure wave roll
+    sim = Simulation(s, clock=lambda: 1_760_000_000.0)
+    for i in range(1200):
+        sim.step(0.1)
+        b, e = sim.boat_state, sim.env_state
+        if i < 300:
+            continue
+        a = math.atan(math.pi * e.wave_height / e.wave_length)
+        p, irr = b.wave_phase, e.wave_irregularity
+        sp = math.sin(p) + irr * math.sin(1.6 * p + 0.7)
+        assert b.pitch == pytest.approx(-PITCH_FACTOR * a * math.cos(b.wave_mu) * sp, abs=1e-9)
+        assert b.roll - b.heel == pytest.approx(ROLL_FACTOR * a * math.sin(b.wave_mu) * sp, abs=1e-9)

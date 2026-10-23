@@ -52,6 +52,9 @@ class BoatState:
     rpm: float
     log_total: float  # m
     log_trip: float  # m
+    wave_phase: float = 0.0  # rad, encounter phase of the wave at the boat
+    wave_mu: float = 0.0  # rad, direction the waves come from relative to the course (0 = ahead)
+    yaw_wave: float = 0.0  # rad, wave-induced yaw (heading_wave − heading)
 
 
 class Boat:
@@ -65,6 +68,7 @@ class Boat:
         self._heel = 0.0
         self._leeway = 0.0
         self._wave_phase = 0.0
+        self._wave_mu = 0.0
         self._yaw = 0.0  # rad, wave-induced yaw; turns the hull and therefore its track
         self._sog = 0.0
         self._cog = 0.0
@@ -162,6 +166,9 @@ class Boat:
             rpm=ap.rpm if motoring else 0.0,
             log_total=self._log_total,
             log_trip=self._log_trip,
+            wave_phase=self._wave_phase,
+            wave_mu=self._wave_mu,
+            yaw_wave=yaw,
         )
 
     def _target_heading(self, cfg: Scenario, wwd: float) -> float:
@@ -180,19 +187,29 @@ class Boat:
         return aws, geo.wrap_pi(from_dir - self._heading - self._yaw)
 
     def _waves(self, dt: float, env: EnvironmentState, sog: float, cog: float) -> tuple[float, float, float]:
-        """Returns the wave components (roll, pitch, yaw) in rad; roll is added to the heel."""
+        """Returns the wave components (roll, pitch, yaw) in rad; roll is added to the heel.
+
+        Roll and pitch follow the slope of the sea surface at the boat. In boat coordinates
+        (x forward, y starboard) the surface is
+            η = A·[cos(p − k·d·r) + (irr/f)·cos(f·p + 0.7 − f·k·d·r)],  A = H/2, f = 1.6,
+        with d = (−cos μ, −sin μ) the direction the waves travel. Its slope at the boat is
+        tan α·S(p)·d with tan α = πH/λ and S(p) = sin p + irr·sin(f·p + 0.7), so bow-up pitch is
+        −α·cos μ·S(p) and starboard-down roll is α·sin μ·S(p). The 3D view draws the same surface.
+        """
         if env.wave_height <= 0:
             return 0.0, 0.0, 0.0
         omega = 2 * math.pi / env.wave_period
         k = 2 * math.pi / env.wave_length
         mu = geo.wrap_pi(env.wave_dir - cog)  # 0 = head seas
+        self._wave_mu = mu
         omega_e = abs(omega + k * sog * math.cos(mu))
         self._wave_phase = (self._wave_phase + omega_e * dt) % (2 * math.pi * 1000)
         slope = math.atan(math.pi * env.wave_height / env.wave_length)
         irr = env.wave_irregularity
         p = self._wave_phase
-        roll_w = slope * abs(math.sin(mu)) * ROLL_FACTOR * (math.sin(p) + irr * math.sin(SECONDARY_FREQ * p + 0.7))
-        pitch_w = slope * abs(math.cos(mu)) * PITCH_FACTOR * (math.cos(p) + irr * math.sin(SECONDARY_FREQ * p + 2.1))
+        s = math.sin(p) + irr * math.sin(SECONDARY_FREQ * p + 0.7)
+        roll_w = ROLL_FACTOR * slope * math.sin(mu) * s
+        pitch_w = -PITCH_FACTOR * slope * math.cos(mu) * s
         yaw_w = slope * YAW_FACTOR * abs(math.sin(2 * mu)) * math.sin(p + 1.0)
         return roll_w, max(-MAX_PITCH, min(MAX_PITCH, pitch_w)), yaw_w
 

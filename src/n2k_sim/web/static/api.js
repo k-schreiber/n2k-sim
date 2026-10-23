@@ -54,6 +54,7 @@ export class Socket {
       try { m = JSON.parse(ev.data); } catch { return; }
       if (m.type === 'state') this.onState(m);
       else if (m.type === 'raw') this.onRaw(m.lines || []);
+      else if (m.type === 'motion' && this.onMotion) this.onMotion(m);
     };
     ws.onclose = () => {
       if (this.ws !== ws) return;

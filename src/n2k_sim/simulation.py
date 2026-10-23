@@ -94,6 +94,7 @@ class Simulation:
         utc = self.clock()
         env = self.env.step(self.t, dt, cfg)
         boat = self.boat.step(self.t, dt, env, cfg)
+        self.env_state, self.boat_state = env, boat
         readings = read_all(SensorInput(env, boat, cfg, utc))
         calc = self.processor.step(readings, dt, cfg.processor.leeway_k)
         values = {**truth_signals(env, boat), **readings, **calc}

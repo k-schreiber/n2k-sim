@@ -172,6 +172,38 @@ class Runtime:
             "pgns": pgns,
         }
 
+    def motion(self) -> dict[str, Any]:
+        """Boat attitude and sea state for the 3D view (SI units: rad, m, m/s, s)."""
+        sim = self.sim
+        boat, env = getattr(sim, "boat_state", None), getattr(sim, "env_state", None)
+        if boat is None or env is None:
+            return {"type": "motion", "t": sim.t, "valid": False}
+        return {
+            "type": "motion",
+            "valid": True,
+            "t": round(sim.t, 3),
+            "roll": boat.roll,
+            "pitch": boat.pitch,
+            "heel": boat.heel,
+            "yaw_wave": boat.yaw_wave,
+            "heading": boat.heading,
+            "leeway": boat.leeway,
+            "rudder": boat.rudder,
+            "awa": boat.awa,
+            "aws": boat.aws,
+            "stw": boat.stw,
+            "motoring": boat.motoring,
+            "wave": {
+                "height": env.wave_height,
+                "length": env.wave_length,
+                "period": env.wave_period,
+                "mu": boat.wave_mu,
+                "phase": boat.wave_phase,
+                "irregularity": env.wave_irregularity,
+                "secondary": 1.6,
+            },
+        }
+
     def raw_since(self, seq: int) -> tuple[list[str], int]:
         new = min(self.raw_seq - seq, len(self.raw_tail))
         lines = list(self.raw_tail)[-new:] if new > 0 else []

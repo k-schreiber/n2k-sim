@@ -95,4 +95,21 @@ All mutations return `{"ok": true}` or HTTP 400 with `{"detail": "..."}`.
 ### WebSocket `/ws`
 
 Server → client: `{"type": "state", ...}` (4 Hz), `{"type": "raw", "lines": ["..."]}` (≤ 5 Hz,
-only after the client subscribed). Client → server: `{"subscribe": "raw"}` / `{"unsubscribe": "raw"}`.
+only after the client subscribed), `{"type": "motion", ...}` (10 Hz, only after subscribing).
+Client → server: `{"subscribe": "raw" | "motion"}` / `{"unsubscribe": "raw" | "motion"}`.
+
+`motion` carries the boat's attitude and the sea state for the 3D view, in SI units (rad, m, m/s):
+
+```json
+{"type": "motion", "valid": true, "t": 123.4,
+ "roll": 0.21, "pitch": -0.03, "heel": 0.19, "yaw_wave": 0.01, "heading": 4.4,
+ "leeway": 0.07, "rudder": -0.05, "awa": -0.52, "aws": 8.1, "stw": 3.0, "motoring": false,
+ "wave": {"height": 1.0, "length": 39.0, "period": 5.0, "mu": 0.6, "phase": 812.3,
+          "irregularity": 0.2, "secondary": 1.6}}
+```
+
+Sea surface in boat coordinates (x forward, y starboard, z up), with `A = height/2`,
+`k = 2π/length`, `f = secondary`, travel direction `d = (−cos mu, −sin mu)`:
+`η(r) = A·[cos(phase − k·d·r) + (irregularity/f)·cos(f·phase + 0.7 − f·k·d·r)]`.
+Wave roll and pitch are derived from the slope of this surface at the boat (simulation.md §6), so
+a renderer that draws it sees the boat ride the waves consistently. Heave = `η(0)`.

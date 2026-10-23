@@ -22,6 +22,7 @@ log = logging.getLogger(__name__)
 STATIC_DIR = Path(__file__).parent / "static"
 STATE_INTERVAL = 0.25  # s
 RAW_INTERVAL = 0.2  # s
+MOTION_INTERVAL = 0.1  # s, the simulation tick
 OK = {"ok": True}
 
 
@@ -146,29 +147,36 @@ def create_app(runtime: Runtime) -> FastAPI:
     @app.websocket("/ws")
     async def ws(socket: WebSocket):
         await socket.accept()
-        sub = {"raw": False, "seq": runtime.raw_seq}
+        sub = {"raw": False, "motion": False, "seq": runtime.raw_seq}
 
         async def receive():
             while True:
                 msg = json.loads(await socket.receive_text())
-                if msg.get("subscribe") == "raw":
+                topic = msg.get("subscribe")
+                if topic == "raw":
                     sub.update(raw=True, seq=max(runtime.raw_seq - 200, 0))
-                elif msg.get("unsubscribe") == "raw":
-                    sub["raw"] = False
+                elif topic == "motion":
+                    sub["motion"] = True
+                topic = msg.get("unsubscribe")
+                if topic in ("raw", "motion"):
+                    sub[topic] = False
 
         async def send():
-            last_state = 0.0
             loop = asyncio.get_running_loop()
+            last_state = last_raw = 0.0
             while True:
                 now = loop.time()
                 if now - last_state >= STATE_INTERVAL:
                     await socket.send_json({"type": "state", **runtime.state()})
                     last_state = now
-                if sub["raw"]:
+                if sub["raw"] and now - last_raw >= RAW_INTERVAL:
                     lines, sub["seq"] = runtime.raw_since(sub["seq"])
                     if lines:
                         await socket.send_json({"type": "raw", "lines": lines})
-                await asyncio.sleep(RAW_INTERVAL if sub["raw"] else STATE_INTERVAL)
+                    last_raw = now
+                if sub["motion"]:
+                    await socket.send_json(runtime.motion())
+                await asyncio.sleep(MOTION_INTERVAL if sub["motion"] else min(STATE_INTERVAL, RAW_INTERVAL))
 
         tasks = [asyncio.create_task(receive()), asyncio.create_task(send())]
         try:

@@ -165,3 +165,16 @@ def test_websocket_pushes_state_and_raw(client):
                 break
         else:
             pytest.fail("no raw lines pushed")
+
+
+def test_websocket_motion_stream(client):
+    with client.websocket_connect("/ws") as ws:
+        ws.send_json({"subscribe": "motion"})
+        for _ in range(20):
+            msg = ws.receive_json()
+            if msg["type"] == "motion":
+                assert msg["valid"] and {"roll", "pitch", "heel", "awa", "wave"} <= set(msg)
+                assert {"height", "length", "mu", "phase"} <= set(msg["wave"])
+                break
+        else:
+            pytest.fail("no motion message")
