@@ -20,6 +20,8 @@ UI on the LAN — it has no login).
 
 ## What it simulates
 
+![image](docs/images/Dashboard.png)
+
 Three tiers (details in [docs/spec/simulation.md](docs/spec/simulation.md)):
 
 1. **Environment** — wind over ground with oscillation, slow shifts, lulls and gusts; current;
