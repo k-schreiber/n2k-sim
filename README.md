@@ -1,8 +1,12 @@
 # n2k-sim
 
 A lean NMEA 2000 simulator of a 40 ft cruising yacht. It streams realistic, mutually consistent N2K
-data in **Yacht Devices RAW** format over **UDP (port 2002)** and **TCP (port 2223)** — the same
-format and ports as a Hat Labs SH-wg or YDWG-02 gateway — and has a browser UI to watch and steer it.
+data in **Yacht Devices RAW** format over **UDP (port 2002)** and **TCP (port 2223)** and has a
+browser UI to watch and steer it.
+
+You can connect navigation software such as qtVlm or navigation apps for testing, or use it as a
+virtual boat network for development of NMEA software. The simulations are simplified and the
+framework must not be used to develop or test critical marine software.
 
 ## Quick start
 
