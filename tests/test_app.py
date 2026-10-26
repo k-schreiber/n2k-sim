@@ -127,7 +127,9 @@ def test_autopilot_tack_and_adjust(client):
     client.post("/api/autopilot/tack")
     assert client.runtime.scenario.autopilot.twa == 45
     client.post("/api/autopilot/adjust", json={"delta": 10})
-    assert client.runtime.scenario.autopilot.twa == 35
+    assert client.runtime.scenario.autopilot.twa == 55
+    client.post("/api/autopilot/adjust", json={"delta": -10})
+    assert client.runtime.scenario.autopilot.twa == 45
 
 
 def test_pgn_disable_and_interval(client, ports):

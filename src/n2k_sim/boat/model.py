@@ -76,6 +76,13 @@ class Boat:
         self._log_total = 0.0
         self._log_trip = 0.0
         self._initialised = False
+        self._twa = 0.0  # rad, signed TWA to the water wind at the last step
+        self._turn_dir = 0  # forced turn direction during a tack/gybe: +1 starboard, -1 port, 0 shortest
+
+    def maneuver(self, toward_wind: bool) -> None:
+        """Forces the next course change through the wind (tack) or away from it (gybe)."""
+        side = 1 if self._twa >= 0 else -1  # wind from starboard: turning to starboard heads up
+        self._turn_dir = side if toward_wind else -side
 
     def reset_trip(self) -> None:
         self._log_trip = 0.0
@@ -96,13 +103,19 @@ class Boat:
             self._initialised = True
 
         # Autopilot: P-controller on heading error, limited turn rate.
-        err = geo.wrap_pi(self._target_heading(cfg, wwd) - self._heading)
+        delta = self._target_heading(cfg, wwd) - self._heading
+        err = geo.wrap_pi(delta)
+        if self._turn_dir and abs(err) > math.radians(2.0):
+            err = self._turn_dir * ((self._turn_dir * delta) % (2 * math.pi))
+        else:
+            self._turn_dir = 0
         r_max = math.radians(cfg.boat.max_turn_rate)
         rate = max(-r_max, min(r_max, KP * err))
         self._heading = geo.wrap_2pi(self._heading + rate * dt)
 
         # Speed: first-order lag towards polar or motor speed.
         twa_water = geo.wrap_pi(wwd - self._heading)
+        self._twa = twa_water
         if motoring:
             target = kn_to_ms(ap.rpm / 1000.0 * cfg.boat.motor_speed_per_1000rpm)
         else:

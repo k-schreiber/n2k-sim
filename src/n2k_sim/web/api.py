@@ -106,9 +106,13 @@ def create_app(runtime: Runtime) -> FastAPI:
         return OK
 
     @app.post("/api/autopilot/tack")
-    @app.post("/api/autopilot/gybe")
     async def tack():
-        runtime.tack()
+        runtime.tack(toward_wind=True)
+        return OK
+
+    @app.post("/api/autopilot/gybe")
+    async def gybe():
+        runtime.tack(toward_wind=False)
         return OK
 
     @app.post("/api/autopilot/adjust")

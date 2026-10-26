@@ -154,7 +154,7 @@ function route(method, path, body) {
   if (path === '/api/seabed/shallow') { shallowUntil = simT + 60; return { ok: true }; }
   if (path === '/api/autopilot/adjust') {
     const d = JSON.parse(body).delta, ap = scenario.autopilot; const k = ap.mode === 'twa' ? 'twa' : 'heading';
-    ap[k] = ap.mode === 'twa' ? ap[k] + d : (ap[k] + d + 360) % 360; return { ok: true };
+    ap[k] = ap.mode === 'twa' ? (ap[k] < 0 ? -1 : 1) * Math.min(180, Math.max(0, Math.abs(ap[k]) + d)) : (ap[k] + d + 360) % 360; return { ok: true };
   }
   if (path === '/api/autopilot/tack' || path === '/api/autopilot/gybe') { scenario.autopilot.twa *= -1; return { ok: true }; }
   if (path === '/api/log/reset_trip') return { ok: true };

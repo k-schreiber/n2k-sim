@@ -105,7 +105,7 @@ Controller: `r = clamp(Kp · err, ±r_max)` with `Kp = 0.5 /s`. Rudder angle is 
 derivative: `δ = clamp(r / (0.15 · max(v, 1 m/s)) , ±35°)` plus a small proportional term on wave
 yaw so the rudder visibly works in waves. Rate of turn sensor = `r`.
 
-UI helpers: "Tack", "Gybe" (flip TWA sign), "+1°/−1°/+10°/−10°" heading buttons.
+UI helpers: "Tack" (flip TWA sign, turning through the wind), "Gybe" (flip TWA sign, turning away through dead downwind), "+1°/−1°/+10°/−10°" (heading mode: turn to starboard/port; TWA mode: widen/narrow |TWA|).
 
 ### 6. Heel, leeway and attitude
 

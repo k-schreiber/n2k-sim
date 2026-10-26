@@ -253,8 +253,10 @@ class Runtime:
         self.scenario.output.pgns[pgn_id] = setting
         self.gateway.settings[pgn_id] = setting
 
-    def tack(self) -> None:
+    def tack(self, toward_wind: bool = True) -> None:
+        """Tack (toward_wind) or gybe onto the opposite side with the same absolute TWA."""
         ap = self.scenario.autopilot
+        self.sim.boat.maneuver(toward_wind)
         if ap.mode == "twa":
             ap.twa = -ap.twa
         else:
@@ -262,10 +264,11 @@ class Runtime:
             ap.heading = (2 * wind - ap.heading) % 360.0
 
     def adjust(self, delta: float) -> None:
-        """Turns by delta degrees (+ = to starboard)."""
+        """Heading mode: turns by delta degrees (+ = to starboard). TWA mode: + widens |TWA|, − points higher."""
         ap = self.scenario.autopilot
         if ap.mode == "twa":
-            ap.twa = max(-180.0, min(180.0, ap.twa - delta))
+            side = -1.0 if ap.twa < 0 else 1.0
+            ap.twa = side * max(0.0, min(180.0, abs(ap.twa) + delta))
         else:
             ap.heading = (ap.heading + delta) % 360.0
 

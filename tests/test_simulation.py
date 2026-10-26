@@ -252,3 +252,27 @@ def test_wave_attitude_follows_surface_slope():
         sp = math.sin(p) + irr * math.sin(1.6 * p + 0.7)
         assert b.pitch == pytest.approx(-PITCH_FACTOR * a * math.cos(b.wave_mu) * sp, abs=1e-9)
         assert b.roll - b.heel == pytest.approx(ROLL_FACTOR * a * math.sin(b.wave_mu) * sp, abs=1e-9)
+
+
+@pytest.mark.parametrize("twa", [40.0, -40.0, 90.0, -90.0, 150.0, -150.0])
+@pytest.mark.parametrize("toward_wind", [True, False])
+def test_tack_turns_through_wind_and_gybe_away(twa, toward_wind):
+    """Tack heads up through the wind, gybe bears away through dead downwind; both end on the mirrored TWA."""
+    sim = Simulation(calm_scenario(mode="twa", twa=twa), clock=lambda: 1_760_000_000.0)
+    sim.step(0.1)
+    sim.boat.maneuver(toward_wind)
+    sim.scenario.autopilot.twa = -twa
+    side = 1 if twa > 0 else -1
+    expected_dir = side if toward_wind else -side  # +1 = turning to starboard
+    last, turned = sim.boat_state.heading, 0.0
+    for _ in range(1200):
+        sim.step(0.1)
+        step = geo.wrap_pi(sim.boat_state.heading - last)
+        last = sim.boat_state.heading
+        assert step * expected_dir >= -1e-6
+        turned += step
+    twa_end = math.degrees(geo.wrap_pi(sim.snapshot.values["env.wwd"] - sim.boat_state.heading))
+    assert twa_end == pytest.approx(-twa, abs=2)
+    # tack sweeps across 0° TWA (2|twa|), gybe across 180° (360 − 2|twa|)
+    expected = 2 * abs(twa) if toward_wind else 360 - 2 * abs(twa)
+    assert math.degrees(abs(turned)) == pytest.approx(expected, abs=3)

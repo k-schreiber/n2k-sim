@@ -86,7 +86,7 @@ each signal's UI unit (`units.UI_UNITS`). JSON everywhere.
 | PATCH | `/api/output/pgns/{id}` | `{"enabled": false, "interval_s": 0.5}` | per-PGN schedule |
 | POST | `/api/wind/gust` | – | gust now |
 | POST | `/api/seabed/shallow` | – | ramp depth to 3 m for 60 s |
-| POST | `/api/autopilot/tack` · `/gybe` | – | flip TWA sign (twa mode) or mirror heading through the wind |
+| POST | `/api/autopilot/tack` · `/gybe` | – | flip TWA sign (twa mode) or mirror heading through the wind; tack turns toward the wind, gybe away from it |
 | POST | `/api/autopilot/adjust` | `{"delta": 10}` | change target heading / TWA by delta degrees |
 | POST | `/api/log/reset_trip` | – | |
 | POST | `/api/sim/pause` · `/resume` · `/reset` | – | run control; reset restarts from the current scenario |
