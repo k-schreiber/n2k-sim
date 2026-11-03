@@ -268,6 +268,11 @@ const boat = (() => {
       const proc = sectionCard('Instrument processor', 'processor', [
         { key: 'leeway_k', label: 'Leeway K (instruments)', min: 0, max: 30, step: 0.1, unit: '' },
       ]);
+      const sensors = sectionCard('Sensors', 'sensors', [
+        { key: 'mast_height', label: 'Masthead height', min: 0, max: 40, step: 0.1, unit: 'm', hint: 'roll/pitch rates move the wind sensor: v = h * rate; 0 = off' },
+        { key: 'wind_damping_s', label: 'Wind damping', min: 0, max: 10, step: 0.1, unit: 's', hint: 'first-order lag on AWA/AWS; 0 = none' },
+        { key: 'invert_pitch', label: 'Fault: invert pitch sign (127257)', bool: true },
+      ]);
       lat = textField({ label: 'Start latitude', type: 'number', step: 0.0001, unit: '°N', commit: () => {} });
       lon = textField({ label: 'Start longitude', type: 'number', step: 0.0001, unit: '°E', commit: () => {} });
       const pos = h('section', { class: 'card' }, h('div', { class: 'card-h' }, h('h3', { text: 'Position' })),
@@ -291,7 +296,7 @@ const boat = (() => {
         { key: 'sats_used', label: 'Satellites used', min: 0, max: 32, step: 1 },
         { key: 'sats_in_view', label: 'Satellites in view', min: 0, max: 32, step: 1 },
       ]);
-      cards = [apCard, boatCard, proc, gps];
+      cards = [apCard, boatCard, proc, sensors, gps];
       polarBox = h('div', { class: 'muted', text: 'Loading polar…' });
       const file = h('input', { type: 'file', accept: '.pol,.txt,.csv,text/plain', hidden: true });
       file.addEventListener('change', async () => {
@@ -302,7 +307,7 @@ const boat = (() => {
       const polar = h('section', { class: 'card wide' }, h('div', { class: 'card-h' }, h('h3', { text: 'Polar' }), h('div', { class: 'spacer' }),
         h('button', { class: 'btn', text: 'Upload .pol…', onclick: () => file.click() }), file),
       h('div', { class: 'card-b' }, polarBox));
-      root.append(h('div', { class: 'cards2' }, apCard.el, boatCard.el, pos, proc.el, gps.el), polar);
+      root.append(h('div', { class: 'cards2' }, apCard.el, boatCard.el, pos, proc.el, sensors.el, gps.el), polar);
     },
     enter() { loadPolar(); },
     update(st) {

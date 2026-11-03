@@ -62,6 +62,7 @@ const scenario = {
   autopilot: { mode: 'twa', heading: 0, twa: -45, rpm: 2200 },
   gps: { variation: 4.5, altitude: 2, geoidal_separation: 45, local_offset_min: 120, hdop: 0.8, vdop: 1.2, pdop: 1.4, tdop: 0.9, sats_used: 12, sats_in_view: 14 },
   processor: { leeway_k: 10 },
+  sensors: { mast_height: 18.8, wind_damping_s: 0, invert_pitch: false },
   static: { air_temp: 22, pressure: 1013.2, humidity: 65, cabin_temp: 24, 'engine.rpm': 0, 'engine.oil_pressure': 3.5, 'engine.oil_temp': 90, 'engine.coolant_temp': 80, 'engine.hours': 1250,
     'tank.fuel.level': 75, 'tank.fuel.capacity': 200, 'tank.fresh_water1.level': 60, 'battery.house.voltage': 12.6, 'battery.house.current': -4.2, 'battery.engine.voltage': 12.8 },
   overrides: {},

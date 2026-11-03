@@ -102,6 +102,14 @@ class Processor(BaseModel):
     leeway_k: float = 10.0  # K used by the instrument processor for leeway correction
 
 
+class Sensors(BaseModel):
+    # Masthead wind sensor height above the roll/pitch axes. Roll and pitch rates move the masthead
+    # (v = h · rate), which adds to the measured apparent wind; 0 = no mast motion in AWA/AWS.
+    mast_height: float = 18.8  # m
+    wind_damping_s: float = 0.0  # s, first-order damping of AWA/AWS in the wind unit (0 = none)
+    invert_pitch: bool = False  # fault: the attitude sensor reports pitch with the wrong sign
+
+
 DEFAULT_STATIC: dict[str, float] = {
     "water_temp": 19.0,
     "air_temp": 22.0,
@@ -162,6 +170,7 @@ class Scenario(BaseModel):
     autopilot: Autopilot = Field(default_factory=Autopilot)
     gps: Gps = Field(default_factory=Gps)
     processor: Processor = Field(default_factory=Processor)
+    sensors: Sensors = Field(default_factory=Sensors)
     static: dict[str, float] = Field(default_factory=lambda: dict(DEFAULT_STATIC))
     overrides: dict[str, float] = Field(default_factory=dict)  # signal name -> UI-unit value
     output: Output = Field(default_factory=Output)
@@ -174,4 +183,4 @@ class Scenario(BaseModel):
         Path(path).write_text(self.model_dump_json(indent=2))
 
 
-SECTIONS = ("wind", "current", "waves", "seabed", "boat", "autopilot", "gps", "processor")
+SECTIONS = ("wind", "current", "waves", "seabed", "boat", "autopilot", "gps", "processor", "sensors")

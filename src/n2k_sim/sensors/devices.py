@@ -1,5 +1,6 @@
 """Tier 3: noise-free sensors. Each device is a pure function of the environment, the boat and the
-scenario's static values, returning the signals that kind of device measures (SI units)."""
+scenario's static values, returning the signals that kind of device measures (SI units). The only
+state is the optional damping of the wind unit (`WindDamping`)."""
 
 from __future__ import annotations
 
@@ -82,13 +83,50 @@ def compass(s: SensorInput) -> Readings:
         "heading_mag": geo.wrap_2pi(s.boat.heading_wave - variation),
         "rot": s.boat.rot,
         "yaw": s.boat.heading_wave,
-        "pitch": s.boat.pitch,
+        "pitch": -s.boat.pitch if s.cfg.sensors.invert_pitch else s.boat.pitch,
         "roll": s.boat.roll,
     }
 
 
 def wind_sensor(s: SensorInput) -> Readings:
-    return {"awa": s.boat.awa, "aws": s.boat.aws}
+    """Masthead unit: apparent wind relative to the masthead, which moves with roll and pitch."""
+    aws, awa = s.boat.aws, s.boat.awa
+    h = s.cfg.sensors.mast_height
+    if h <= 0:
+        return {"awa": awa, "aws": aws}
+    vx, vy = masthead_velocity(h, s.boat.roll_rate, s.boat.pitch_rate)
+    # Wind "from" vector in the boat frame (x forward, y starboard); moving into the air adds to it.
+    x = aws * math.cos(awa) + vx
+    y = aws * math.sin(awa) + vy
+    return {"awa": math.atan2(y, x), "aws": math.hypot(x, y)}
+
+
+def masthead_velocity(h: float, roll_rate: float, pitch_rate: float) -> tuple[float, float]:
+    """Masthead velocity (forward, starboard) in m/s from roll rate (+ = rolling to starboard) and
+    pitch rate (+ = bow rising) in rad/s: rolling to starboard moves it to starboard, bow down moves
+    it forward."""
+    return -h * pitch_rate, h * roll_rate
+
+
+class WindDamping:
+    """First-order damping of AWA and AWS, as set in a masthead unit (time constant 0 = none)."""
+
+    def __init__(self) -> None:
+        self._awa: float | None = None
+        self._aws = 0.0
+
+    def step(self, r: Readings, dt: float, tau: float) -> Readings:
+        awa, aws = r.get("awa"), r.get("aws")
+        if tau <= 0 or awa is None or aws is None:
+            self._awa = None
+            return r
+        if self._awa is None:
+            self._awa, self._aws = awa, aws
+        else:
+            a = min(dt / tau, 1.0)
+            self._awa = geo.wrap_pi(self._awa + a * geo.wrap_pi(awa - self._awa))
+            self._aws += a * (aws - self._aws)
+        return {**r, "awa": self._awa, "aws": self._aws}
 
 
 def speed_log(s: SensorInput) -> Readings:

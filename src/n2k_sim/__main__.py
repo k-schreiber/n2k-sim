@@ -22,6 +22,8 @@ def main() -> None:
     parser.add_argument("--udp-port", type=int, help="UDP port (default 2002)")
     parser.add_argument("--tcp-port", type=int, help="TCP server port (default 2223)")
     parser.add_argument("--seed", type=int, help="random seed")
+    parser.add_argument("--mast-height", type=float, help="masthead wind sensor height, m (default 18.8, 0 = no mast motion)")
+    parser.add_argument("--wind-damping", type=float, help="AWA/AWS damping time constant, s (default 0 = none)")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -34,6 +36,10 @@ def main() -> None:
         scenario.output.tcp.port = args.tcp_port
     if args.seed is not None:
         scenario.seed = args.seed
+    if args.mast_height is not None:
+        scenario.sensors.mast_height = args.mast_height
+    if args.wind_damping is not None:
+        scenario.sensors.wind_damping_s = args.wind_damping
 
     out = scenario.output
     print(

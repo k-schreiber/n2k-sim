@@ -19,8 +19,9 @@ Open http://127.0.0.1:8080/. Point a client (e.g. NMEA Dashboard: *NMEA2000 YD R
 machine's IP, TCP port 2223, or listen on UDP port 2002.
 
 Options: `--scenario file.json`, `--udp-host 192.168.1.255` (subnet broadcast or unicast, e.g.
-`127.0.0.1` for an emulator), `--udp-port`, `--tcp-port`, `--seed`, `--ui-host 0.0.0.0` (expose the
-UI on the LAN — it has no login).
+`127.0.0.1` for an emulator), `--udp-port`, `--tcp-port`, `--seed`, `--mast-height 18.8` (masthead
+wind sensor height; 0 = no mast motion in AWA/AWS), `--wind-damping 1.0` (AWA/AWS damping, s),
+`--ui-host 0.0.0.0` (expose the UI on the LAN — it has no login).
 
 ## What it simulates
 
@@ -33,7 +34,8 @@ Three tiers (details in [docs/spec/simulation.md](docs/spec/simulation.md)):
 2. **Boat** — autopilot (hold heading, hold TWA, motor), STW from a polar file, heel from a lookup
    table, leeway `K·heel/STW²`, pitch/roll from waves, rudder, rate of turn, position.
 3. **Sensors** — noise-free GPS (full GNSS data), fluxgate compass (magnetic), masthead wind,
-   paddle-wheel log, depth sounder, rudder, engine, tanks, batteries, weather station.
+   paddle-wheel log, depth sounder, rudder, engine, tanks, batteries, weather station. The masthead
+   wind sensor moves with roll and pitch (height 18.8 m), so AWA/AWS carry the mast motion.
 
 An instrument processor then calculates true wind, ground wind, set & drift (with leeway
 correction), VMG, polar performance and dew point. All values can be overridden; overrides change

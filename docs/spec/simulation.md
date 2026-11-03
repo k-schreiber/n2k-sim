@@ -134,6 +134,10 @@ UI helpers: "Tack" (flip TWA sign, turning through the wind), "Gybe" (flip TWA s
   it is applied to the course through water (and therefore COG/SOG), not only to the compass, so
   `COG/SOG − (heading + leeway, STW)` always equals the current exactly.
 - Clamp roll ±45°, pitch ±20°.
+- **Attitude rates** (internal, drive the masthead motion, §8): roll rate = d(heel)/dt +
+  d(wave roll)/dt, pitch rate = d(pitch)/dt, evaluated exactly at each step (encounter phase, course
+  change relative to the waves and sail damping included). A tack therefore gives a roll pulse
+  from the heel change (≈ 40° over ~10 s), the waves give the oscillation.
 
 ### 7. Polar file format
 
@@ -161,7 +165,7 @@ Each device module (`sensors/*.py`) produces only what that kind of device measu
 |---|---|---|
 | GPS / GNSS receiver | lat, lon, altitude (2 m), COG, SOG, UTC date & time, local offset, magnetic variation (from built-in model = configured value), fix type 3D / method GNSS fix, satellites used (12) and in view (14, with PRN, elevation, azimuth, SNR), HDOP 0.8, VDOP 1.2, PDOP 1.4, TDOP 0.9, geoidal separation 45 m | COG/SOG = true ground track, so they include leeway and current |
 | Fluxgate compass | magnetic heading, rate of turn, pitch & roll (heel + waves), yaw | industry-standard fluxgate (e.g. like a Precision-9 / EV-1 sensor core): reports **magnetic** heading; deviation field n/a; variation is not measured by the compass; it comes from the GPS (127258) and the gateway also puts it into the 127250 variation field |
-| Wind sensor (masthead) | AWA, AWS | true apparent wind: wind over ground − boat velocity over ground |
+| Wind sensor (masthead) | AWA, AWS | apparent wind relative to the **masthead**: wind over ground − boat velocity over ground − masthead velocity (below); optional damping |
 | Speed log (paddle wheel) | STW (speed along the course through water), log, trip, water temperature | |
 | Depth sounder | depth below transducer, transducer offset | depth = seabed depth − transducer depth (0.5 m) |
 | Rudder angle sensor | rudder angle | |
@@ -169,6 +173,22 @@ Each device module (`sensors/*.py`) produces only what that kind of device measu
 | Tank senders, battery monitor, weather station | static values | |
 
 GNSS time = system UTC (option: simulation clock if time-scaling is ever added).
+
+**Masthead motion** (`sensors` section, Boat view): the wind unit sits `mast_height` (default
+18.8 m) above the roll/pitch axes, so roll and pitch move it with
+`v_y = h · roll_rate` (rolling to starboard → masthead to starboard) and
+`v_x = −h · pitch_rate` (bow down → masthead forward), boat frame x forward, y starboard. The
+measured "from" vector is the hull's apparent wind plus that velocity:
+`(AWS·cos AWA, AWS·sin AWA)_measured = (AWS·cos AWA, AWS·sin AWA)_hull + (v_x, v_y)`.
+In the default 1 m / 5 s sea upwind this swings AWA by about ±2–3° at the encounter period; a tack
+adds a few degrees in the sense of the turn. `boat.awa`/`boat.aws` stay the hull's apparent wind,
+which drives heel and leeway; the processor's true wind uses the measured values, as on a real
+system. `mast_height = 0` turns the effect off (output bit-identical to a sensor without it).
+
+- `wind_damping_s` (default 0 = off): first-order low-pass on the published AWA (shortest way
+  round ±180°) and AWS, like the damping setting of a masthead unit.
+- `invert_pitch` (fault, default off): the attitude sensor publishes pitch with the wrong sign
+  (127257 only; the masthead motion still uses the true pitch), for testing sign checks.
 
 ### 9. Static and slowly varying environment values
 

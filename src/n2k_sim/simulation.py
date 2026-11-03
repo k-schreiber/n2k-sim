@@ -14,7 +14,7 @@ from n2k_sim.calc.processor import Processor
 from n2k_sim.config import DATA_DIR, Scenario
 from n2k_sim.environment.model import Environment
 from n2k_sim.environment.state import EnvironmentState
-from n2k_sim.sensors.devices import SensorInput, read_all
+from n2k_sim.sensors.devices import SensorInput, WindDamping, read_all
 from n2k_sim.signals.catalogue import BY_NAME, Layer
 from n2k_sim.units import from_ui
 
@@ -81,6 +81,7 @@ class Simulation:
         self.env = Environment(self.scenario.seed)
         self.boat = Boat(self.scenario, self.polar, self.heel_table)
         self.processor = Processor(self.polar)
+        self.wind_damping = WindDamping()
         self.snapshot: Snapshot | None = None
 
     def set_polar(self, polar: Polar) -> None:
@@ -96,6 +97,7 @@ class Simulation:
         boat = self.boat.step(self.t, dt, env, cfg)
         self.env_state, self.boat_state = env, boat
         readings = read_all(SensorInput(env, boat, cfg, utc))
+        readings = self.wind_damping.step(readings, dt, cfg.sensors.wind_damping_s)
         calc = self.processor.step(readings, dt, cfg.processor.leeway_k)
         values = {**truth_signals(env, boat), **readings, **calc}
         self.snapshot = Snapshot(self.t, utc, values, apply_overrides(values, cfg.overrides))
