@@ -13,6 +13,9 @@ env.depth|m|env|seabed|Depth below waterline
 boat.heading|deg360|env|boat|True heading
 boat.stw|kn|env|boat|Speed through water
 boat.heel|deg180|env|boat|Heel
+boat.stw_local|kn|env|boat|Speed through local (orbiting) water at the wheel
+boat.wave_surge|kn|env|boat|Wave surge of the hull
+boat.orbital_fwd|kn|env|boat|Orbital water velocity at the hull (along course)
 awa|deg180|sensor|wind|Apparent wind angle|130306
 aws|kn|sensor|wind|Apparent wind speed|130306
 heading_mag|deg360|sensor|compass|Magnetic heading|127250
@@ -56,13 +59,13 @@ const scenario = {
   seed: 1,
   wind: { fixed: false, twd: 300, tws: 12, osc_amplitude: 8, osc_period_min: 6, shift_rate: 0.5, gust_interval_s: 90, gust_strength_pct: 35, gust_duration_s: 20, gust_veer: 5, lull_depth_pct: 10 },
   current: { fixed: true, set: 135, drift: 0.5, tidal_amplitude_pct: 50, tidal_period_h: 12.42 },
-  waves: { enabled: true, direction: 290, height: 1, period: 5, irregularity: 0.2 },
+  waves: { enabled: true, direction: 290, height: 1, period: 5, irregularity: 0.2, orbital: false, follow_wind: false },
   seabed: { fixed: false, depth: 20, depth_min: 12, depth_max: 35, change_period_min: 5, transducer_depth: 0.5, keel_depth: 1.8 },
-  boat: { lat: 43.48, lon: 16.4, polar_file: 'mock_cruiser_40.pol', leeway_k: 10, stw_time_constant_s: 8, max_turn_rate: 6, motor_speed_per_1000rpm: 2.6, sail_roll_damping: 0.35, sail_damping_aws_ref: 15 },
+  boat: { lat: 43.48, lon: 16.4, polar_file: 'mock_cruiser_40.pol', leeway_k: 10, stw_time_constant_s: 8, max_turn_rate: 6, motor_speed_per_1000rpm: 2.6, sail_roll_damping: 0.35, sail_damping_aws_ref: 15, lwl: 10.5, wave_surge_factor: 1 },
   autopilot: { mode: 'twa', heading: 0, twa: -45, rpm: 2200 },
   gps: { variation: 4.5, altitude: 2, geoidal_separation: 45, local_offset_min: 120, hdop: 0.8, vdop: 1.2, pdop: 1.4, tdop: 0.9, sats_used: 12, sats_in_view: 14 },
-  processor: { leeway_k: 10 },
-  sensors: { mast_height: 18.8, wind_damping_s: 0, invert_pitch: false },
+  processor: { leeway_k: 10, stw_damping_s: 0 },
+  sensors: { mast_height: 18.8, wind_damping_s: 0, invert_pitch: false, paddlewheel_depth: 0.5, paddlewheel_lag_s: 0, stw_average_s: 1, stw_factor: 1 },
   static: { air_temp: 22, pressure: 1013.2, humidity: 65, cabin_temp: 24, 'engine.rpm': 0, 'engine.oil_pressure': 3.5, 'engine.oil_temp': 90, 'engine.coolant_temp': 80, 'engine.hours': 1250,
     'tank.fuel.level': 75, 'tank.fuel.capacity': 200, 'tank.fresh_water1.level': 60, 'battery.house.voltage': 12.6, 'battery.house.current': -4.2, 'battery.engine.voltage': 12.8 },
   overrides: {},

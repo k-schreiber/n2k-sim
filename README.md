@@ -36,6 +36,8 @@ Three tiers (details in [docs/spec/simulation.md](docs/spec/simulation.md)):
 3. **Sensors** — noise-free GPS (full GNSS data), fluxgate compass (magnetic), masthead wind,
    paddle-wheel log, depth sounder, rudder, engine, tanks, batteries, weather station. The masthead
    wind sensor moves with roll and pitch (height 18.8 m), so AWA/AWS carry the mast motion.
+   Optional (`waves.orbital`): the wave orbit surges the hull and the paddle wheel reads the local
+   water, so STW and SOG oscillate with the waves ([spec](docs/spec/wave-orbital-stw.md)).
 
 An instrument processor then calculates true wind, ground wind, set & drift (with leeway
 correction), VMG, polar performance and dew point. All values can be overridden; overrides change

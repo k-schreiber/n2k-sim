@@ -21,8 +21,9 @@ class Processor:
         self.polar = polar
         self._roll: float | None = None
         self._current: tuple[float, float] | None = None  # damped (east, north) vector
+        self._stw: float | None = None  # damped STW (only with stw_damping > 0)
 
-    def step(self, r: Mapping[str, Any], dt: float, leeway_k: float) -> dict[str, Any]:
+    def step(self, r: Mapping[str, Any], dt: float, leeway_k: float, stw_damping: float = 0.0) -> dict[str, Any]:
         out: dict[str, Any] = dict.fromkeys(
             ("heading_true", "leeway_calc", "tws", "twa", "twd", "gws", "gwa", "gwd", "current_set",
              "current_drift", "vmg_wind", "polar_speed", "performance", "dew_point")
@@ -38,6 +39,11 @@ class Processor:
         stw, roll = r.get("stw"), r.get("roll")
         if stw is None:
             return out
+        if stw_damping > 0:
+            self._stw = stw if self._stw is None else self._stw + (stw - self._stw) * min(dt / stw_damping, 1.0)
+            stw = self._stw
+        else:
+            self._stw = None
         if roll is not None:
             self._roll = roll if self._roll is None else self._roll + (roll - self._roll) * min(dt / ROLL_FILTER_TIME, 1.0)
         lw = leeway(self._roll or 0.0, stw, leeway_k)

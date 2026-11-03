@@ -1,15 +1,17 @@
 """Tier 3: noise-free sensors. Each device is a pure function of the environment, the boat and the
 scenario's static values, returning the signals that kind of device measures (SI units). The only
-state is the optional damping of the wind unit (`WindDamping`)."""
+state is the signal processing inside two units: wind damping (`WindDamping`) and the speed log's
+averaging of the paddle wheel (`PaddleWheel`)."""
 
 from __future__ import annotations
 
 import math
+from collections import deque
 from dataclasses import dataclass
 from typing import Any, Callable
 
 from n2k_sim import geo
-from n2k_sim.boat.model import BoatState
+from n2k_sim.boat.model import BoatState, orbital_fwd, orbital_on
 from n2k_sim.config import Scenario
 from n2k_sim.environment.state import EnvironmentState
 from n2k_sim.signals.catalogue import BY_NAME, Layer
@@ -131,11 +133,50 @@ class WindDamping:
 
 def speed_log(s: SensorInput) -> Readings:
     return {
-        "stw": s.boat.stw,
+        "stw": paddlewheel_local(s),
         "log_total": s.boat.log_total,
         "log_trip": s.boat.log_trip,
         "water_temp": static_value(s.cfg, "water_temp"),
     }
+
+
+def paddlewheel_local(s: SensorInput) -> float:
+    """Instantaneous signed wheel speed: the hull relative to the local water at the wheel,
+    v + w − u(z_pw) (negative = the water flows forward past the wheel). The wheel has no inertia,
+    so it reads the orbital water velocity the hull only partly follows."""
+    b = s.boat
+    if not orbital_on(s.cfg, s.env):
+        return b.stw
+    return b.stw + b.wave_surge - orbital_fwd(s.env, b.wave_phase, b.mu_w, s.cfg.sensors.paddlewheel_depth)
+
+
+class PaddleWheel:
+    """The speed log's processing of the wheel: optional inertia lag on the wave part, then the log
+    counts pulses whichever way the wheel turns (|speed|), averages them over its update interval and
+    applies the calibration factor (a fault)."""
+
+    def __init__(self) -> None:
+        self._lag: float | None = None
+        self._window: deque[float] = deque()
+
+    def step(self, r: Readings, v: float, orbital: bool, dt: float, cfg: Scenario) -> Readings:
+        sensors = cfg.sensors
+        stw = r["stw"]
+        if not orbital:
+            self._lag = None
+            self._window.clear()
+            return r if sensors.stw_factor == 1.0 else {**r, "stw": stw * sensors.stw_factor}
+        wave = stw - v
+        if sensors.paddlewheel_lag_s > 0:
+            a = min(dt / sensors.paddlewheel_lag_s, 1.0)
+            self._lag = wave if self._lag is None else self._lag + (wave - self._lag) * a
+            wave = self._lag
+        else:
+            self._lag = None
+        self._window.append(abs(v + wave))  # pulses don't tell the direction
+        while len(self._window) > max(1, round(sensors.stw_average_s / dt)):
+            self._window.popleft()
+        return {**r, "stw": sum(self._window) / len(self._window) * sensors.stw_factor}
 
 
 def depth_sounder(s: SensorInput) -> Readings:

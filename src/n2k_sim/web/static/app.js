@@ -170,10 +170,12 @@ const environment = (() => {
       ]);
       const waves = sectionCard('Waves', 'waves', [
         { key: 'enabled', label: 'Enabled', bool: true, header: true },
-        { key: 'direction', label: 'Direction (from)', min: 0, max: 360, step: 1, unit: '°' },
+        { key: 'direction', label: 'Direction (from)', min: 0, max: 360, step: 1, unit: '°', hint: 'ignored while "From the mean wind direction" is on' },
         { key: 'height', label: 'Height', min: 0, max: 8, step: 0.1, unit: 'm' },
         { key: 'period', label: 'Period', min: 2, max: 15, step: 0.1, unit: 's' },
         { key: 'irregularity', label: 'Irregularity', min: 0, max: 1, step: 0.01, unit: '' },
+        { key: 'follow_wind', label: 'From the mean wind direction', bool: true },
+        { key: 'orbital', label: 'Orbital velocity (hull surge, paddle wheel)', bool: true },
       ]);
       const seabed = sectionCard('Seabed', 'seabed', [
         { key: 'fixed', label: 'Fixed depth', bool: true, header: true },
@@ -264,13 +266,20 @@ const boat = (() => {
         { key: 'motor_speed_per_1000rpm', label: 'Motor speed / 1000 rpm', min: 0.5, max: 6, step: 0.1, unit: 'kn' },
         { key: 'sail_roll_damping', label: 'Sail roll damping (full load)', min: 0, max: 1, step: 0.05, unit: '', hint: 'wave roll factor when sails are fully loaded; 1 = no damping' },
         { key: 'sail_damping_aws_ref', label: 'Full sail load at AWS', min: 1, max: 40, step: 0.5, unit: 'kn' },
+        { key: 'lwl', label: 'Waterline length', min: 3, max: 40, step: 0.1, unit: 'm', hint: 'hull response to waves longer or shorter than the boat' },
+        { key: 'wave_surge_factor', label: 'Wave surge factor', min: 0, max: 1.5, step: 0.05, unit: '', hint: 'wave pressure force on the hull; 0 = drag only' },
       ]);
       const proc = sectionCard('Instrument processor', 'processor', [
         { key: 'leeway_k', label: 'Leeway K (instruments)', min: 0, max: 30, step: 0.1, unit: '' },
+        { key: 'stw_damping_s', label: 'STW damping', min: 0, max: 30, step: 0.5, unit: 's', hint: 'used for true wind, leeway, VMG, performance and current; 0 = none' },
       ]);
       const sensors = sectionCard('Sensors', 'sensors', [
         { key: 'mast_height', label: 'Masthead height', min: 0, max: 40, step: 0.1, unit: 'm', hint: 'roll/pitch rates move the wind sensor: v = h * rate; 0 = off' },
         { key: 'wind_damping_s', label: 'Wind damping', min: 0, max: 10, step: 0.1, unit: 's', hint: 'first-order lag on AWA/AWS; 0 = none' },
+        { key: 'paddlewheel_depth', label: 'Paddle wheel depth', min: 0, max: 3, step: 0.05, unit: 'm' },
+        { key: 'paddlewheel_lag_s', label: 'Paddle wheel lag', min: 0, max: 5, step: 0.1, unit: 's', hint: 'wheel inertia on the wave part; 0 = none' },
+        { key: 'stw_average_s', label: 'STW averaging', min: 0, max: 5, step: 0.1, unit: 's', hint: 'log averages the wheel speed (either direction) over its update interval' },
+        { key: 'stw_factor', label: 'Fault: STW factor', min: 0.5, max: 1.5, step: 0.01, unit: '', hint: 'calibration error of the reported STW; 1 = none' },
         { key: 'invert_pitch', label: 'Fault: invert pitch sign (127257)', bool: true },
       ]);
       lat = textField({ label: 'Start latitude', type: 'number', step: 0.0001, unit: '°N', commit: () => {} });

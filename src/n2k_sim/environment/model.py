@@ -50,7 +50,7 @@ class Environment:
             gust=gust,
             current_set=math.radians(cur.set % 360.0),
             current_drift=kn_to_ms(max(drift, 0.0)),
-            wave_dir=math.radians(waves.direction % 360.0),
+            wave_dir=math.radians((cfg.wind.twd if waves.follow_wind else waves.direction) % 360.0),
             wave_height=max(height, 0.0),
             wave_length=wavelength(waves.period),
             wave_period=max(waves.period, 0.5),

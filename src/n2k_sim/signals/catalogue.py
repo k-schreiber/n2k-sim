@@ -58,6 +58,9 @@ SIGNALS: tuple[SignalDef, ...] = (
     _s("boat.awa", "deg180", E, "boat", "True apparent wind angle"),
     _s("boat.aws", "kn", E, "boat", "True apparent wind speed"),
     _s("boat.target_stw", "kn", E, "boat", "Polar target speed"),
+    _s("boat.stw_local", "kn", E, "boat", "Speed through local (orbiting) water at the wheel"),
+    _s("boat.wave_surge", "kn", E, "boat", "Wave surge of the hull"),
+    _s("boat.orbital_fwd", "kn", E, "boat", "Orbital water velocity at the hull (along course)"),
     # --- Tier 3 sensors -----------------------------------------------------------------------
     _s("awa", "deg180", S, "wind", "Apparent wind angle", 130306),
     _s("aws", "kn", S, "wind", "Apparent wind speed", 130306),

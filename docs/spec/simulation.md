@@ -86,11 +86,13 @@ State: position (lat, lon), heading `ψ` (true), STW `v`, leeway `λ`, rudder `�
    ψ += r·dt
    λ  = leeway(heel, v)                       # §6, signed, positive = boat slips to starboard
    ctw = ψ + λ                                # course through water
-   V_water  = v · (sin ctw, cos ctw)          # east, north
+   V_water  = (v + w) · (sin ctw, cos ctw)    # east, north; w = wave surge, 0 unless waves.orbital
    V_ground = V_water + C
    position += V_ground · dt                  # local flat-earth step, metres → degrees
    SOG = |V_ground|, COG = atan2(V_ground)
    ```
+   With `waves.orbital` the hull surges with the wave orbit (w) and ctw is approximated with the
+   previous step's leeway for the wave projection; see [wave-orbital-stw.md](wave-orbital-stw.md).
 4. Log/trip accumulate distance through water; trip resettable from the UI.
 
 ### 5. Autopilot
@@ -132,7 +134,9 @@ UI helpers: "Tack" (flip TWA sign, turning through the wind), "Gybe" (flip TWA s
 - **Yaw** (127257) = heading (yaw angle reported by the attitude sensor = true heading, small
   wave-induced oscillation ±1–2° added to heading itself). The wave yaw turns the **whole hull**:
   it is applied to the course through water (and therefore COG/SOG), not only to the compass, so
-  `COG/SOG − (heading + leeway, STW)` always equals the current exactly.
+  `COG/SOG − (heading + leeway, STW)` equals the current exactly. With `waves.orbital` the paddle
+  wheel reads the local orbiting water, so this difference is current + the orbital velocity at the
+  wheel ([wave-orbital-stw.md](wave-orbital-stw.md) §7).
 - Clamp roll ±45°, pitch ±20°.
 - **Attitude rates** (internal, drive the masthead motion, §8): roll rate = d(heel)/dt +
   d(wave roll)/dt, pitch rate = d(pitch)/dt, evaluated exactly at each step (encounter phase, course
@@ -166,7 +170,7 @@ Each device module (`sensors/*.py`) produces only what that kind of device measu
 | GPS / GNSS receiver | lat, lon, altitude (2 m), COG, SOG, UTC date & time, local offset, magnetic variation (from built-in model = configured value), fix type 3D / method GNSS fix, satellites used (12) and in view (14, with PRN, elevation, azimuth, SNR), HDOP 0.8, VDOP 1.2, PDOP 1.4, TDOP 0.9, geoidal separation 45 m | COG/SOG = true ground track, so they include leeway and current |
 | Fluxgate compass | magnetic heading, rate of turn, pitch & roll (heel + waves), yaw | industry-standard fluxgate (e.g. like a Precision-9 / EV-1 sensor core): reports **magnetic** heading; deviation field n/a; variation is not measured by the compass; it comes from the GPS (127258) and the gateway also puts it into the 127250 variation field |
 | Wind sensor (masthead) | AWA, AWS | apparent wind relative to the **masthead**: wind over ground − boat velocity over ground − masthead velocity (below); optional damping |
-| Speed log (paddle wheel) | STW (speed along the course through water), log, trip, water temperature | |
+| Speed log (paddle wheel) | STW (speed along the course through water), log, trip, water temperature | with `waves.orbital`: the wheel reads the local orbiting water and the hull surges with the waves ([wave-orbital-stw.md](wave-orbital-stw.md)); `sensors.stw_factor` calibration fault |
 | Depth sounder | depth below transducer, transducer offset | depth = seabed depth − transducer depth (0.5 m) |
 | Rudder angle sensor | rudder angle | |
 | Engine interface | RPM (motor mode) and static engine values | only while RPM > 0 |
@@ -203,12 +207,14 @@ Because leeway exists in tier 2 but no sensor measures it directly, instruments 
 real processor does: the GPS track (COG) differs from the heading by leeway + current. The
 instrument processor (`calc/`) therefore applies **leeway correction** with the same formula and an
 editable K (default = boat K). With matching K, calculated set & drift and true wind exactly recover
-the simulated current and water wind; with a different K the calculation shows the realistic
-error — useful for testing.
+the simulated current and water wind (orbit off); with a different K the calculation shows the
+realistic error — useful for testing. With `waves.orbital`, STW carries the wave orbit and the
+calculated current shows the mean wave drift as a false current in the wave travel direction
+(0.13 kn in 1 m following seas; [wave-orbital-stw.md](wave-orbital-stw.md) §1, §7).
 
 **Note for clients that calculate current themselves (e.g. qtVLM):** they compute
 `COG/SOG − (CTW, STW)` with their own leeway estimate from the heel in PGN 127257. That heel
 includes the wave roll (about ±5° in a 1 m beam sea), so an undamped estimate makes their current
 oscillate with the waves, and a leeway coefficient different from `boat.leeway_k` (default 10)
-leaves a constant bias. Both are realistic; with waves disabled and matching K they recover the
-simulated current exactly.
+leaves a constant bias. Both are realistic; with waves disabled (or `waves.orbital` off and no wave
+roll) and matching K they recover the simulated current exactly.

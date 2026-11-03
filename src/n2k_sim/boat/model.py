@@ -1,7 +1,8 @@
 """Tier 2: the boat. Reads the environment (never the sensors) and produces the boat's true state.
 
 Lean by design: first-order speed response, P-controlled autopilot, heel from a lookup table,
-leeway from the classic K·heel/STW² formula and wave-driven attitude (see docs/spec/simulation.md).
+leeway from the classic K·heel/STW² formula, wave-driven attitude and optional wave surge (see
+docs/spec/simulation.md and docs/spec/wave-orbital-stw.md).
 """
 
 from __future__ import annotations
@@ -25,6 +26,9 @@ ROLL_FACTOR = 1.2
 PITCH_FACTOR = 0.8
 YAW_FACTOR = 0.25
 SECONDARY_FREQ = 1.6
+HULL_DEPTH = 0.4  # m, depth at which the orbital velocity drives the hull
+SURGE_RATIO_CAP = 2.0  # max |ω/ω_e| in the wave pressure response (stops the blow-up near surfing)
+ENCOUNTER_SMOOTHING = 20.0  # s, low-pass of ω_e for the wave pressure response (not for the phase)
 
 
 @dataclass(frozen=True)
@@ -57,6 +61,9 @@ class BoatState:
     yaw_wave: float = 0.0  # rad, wave-induced yaw (heading_wave − heading)
     roll_rate: float = 0.0  # rad/s, d(roll)/dt (heel change + waves), + = rolling to starboard
     pitch_rate: float = 0.0  # rad/s, d(pitch)/dt, + = bow rising
+    mu_w: float = 0.0  # rad, direction the waves come from relative to the course through water
+    wave_surge: float = 0.0  # m/s, hull velocity along the course through water caused by the orbit
+    orbital_fwd: float = 0.0  # m/s, orbital water velocity along the course through water at the hull
 
 
 class Boat:
@@ -77,6 +84,10 @@ class Boat:
         self._last_heading_wave: float | None = None
         self._last_damping: float | None = None
         self._last_mu: float | None = None
+        self._omega_e_slow: float | None = None  # rad/s, signed encounter frequency, low-passed
+        self._surge = 0.0  # m/s, wave surge w (exactly 0 when the orbital effect is off)
+        self._surge_y = [0.0, 0.0]  # drag-driven part of w per wave component
+        self._surging = False  # orbital effect active at the last step
         self._log_total = 0.0
         self._log_trip = 0.0
         self._initialised = False
@@ -130,6 +141,17 @@ class Boat:
         # Wave-induced motion (encounter frequency from the previous ground track). Yaw turns the
         # whole hull, so it changes the track as well as what the compass sees.
         roll_w, pitch, self._yaw, roll_w_rate, pitch_rate = self._waves(dt, env, self._sog, self._cog)
+
+        # Wave surge: the orbiting water moves the hull along its course through water. μ_w uses the
+        # leeway of the previous step (it changes by far less than 0.1° per step).
+        mu_w = geo.wrap_pi(env.wave_dir - (self._heading + self._yaw + self._leeway))
+        if orbital_on(cfg, env):
+            self._surge, u_hull = self._wave_surge(dt, env, mu_w, cfg, seed=not self._surging)
+            self._surging = True
+        else:
+            self._surge, u_hull = 0.0, 0.0
+            self._surge_y = [0.0, 0.0]
+            self._surging = False
 
         # Ground velocity with the previous leeway (heel depends on it via apparent wind).
         ground = self._ground_velocity(current)
@@ -194,6 +216,9 @@ class Boat:
             yaw_wave=yaw,
             roll_rate=roll_rate,
             pitch_rate=pitch_rate,
+            mu_w=mu_w,
+            wave_surge=self._surge,
+            orbital_fwd=u_hull,
         )
 
     def _target_heading(self, cfg: Scenario, wwd: float) -> float:
@@ -203,7 +228,7 @@ class Boat:
         return math.radians(ap.heading % 360.0)
 
     def _ground_velocity(self, current: tuple[float, float]) -> tuple[float, float]:
-        water = geo.vector(self._stw, self._heading + self._yaw + self._leeway)
+        water = geo.vector(self._stw + self._surge, self._heading + self._yaw + self._leeway)
         return geo.add(water, current)
 
     def _apparent(self, wind_ground, ground) -> tuple[float, float]:
@@ -226,6 +251,7 @@ class Boat:
         """
         if env.wave_height <= 0:
             self._last_mu = None
+            self._omega_e_slow = None
             return 0.0, 0.0, 0.0, 0.0, 0.0
         omega = 2 * math.pi / env.wave_period
         k = 2 * math.pi / env.wave_length
@@ -233,7 +259,12 @@ class Boat:
         self._wave_mu = mu
         mu_rate = 0.0 if self._last_mu is None else geo.wrap_pi(mu - self._last_mu) / dt  # course changes
         self._last_mu = mu
-        omega_e = abs(omega + k * sog * math.cos(mu))
+        omega_e_signed = omega + k * sog * math.cos(mu)  # < 0: the boat overtakes the waves
+        omega_e = abs(omega_e_signed)
+        if self._omega_e_slow is None:
+            self._omega_e_slow = omega_e_signed
+        else:
+            self._omega_e_slow += (omega_e_signed - self._omega_e_slow) * min(dt / ENCOUNTER_SMOOTHING, 1.0)
         self._wave_phase = (self._wave_phase + omega_e * dt) % (2 * math.pi * 1000)
         slope = math.atan(math.pi * env.wave_height / env.wave_length)
         irr = env.wave_irregularity
@@ -248,6 +279,71 @@ class Boat:
         if abs(pitch_w) > MAX_PITCH:
             pitch_rate = 0.0
         return roll_w, max(-MAX_PITCH, min(MAX_PITCH, pitch_w)), yaw_w, roll_rate, pitch_rate
+
+    def _wave_surge(
+        self, dt: float, env: EnvironmentState, mu_w: float, cfg: Scenario, seed: bool
+    ) -> tuple[float, float]:
+        """Returns (w, u): the hull's wave surge and the orbital velocity at the hull, both along the
+        course through water in m/s.
+
+        Per wave component w = κ′·u + y with dy/dt = ((1 − κ′)·u − y)/τ: the wave pressure force
+        (Froude–Krylov, ∝ the water acceleration ω·u, integrated at the encounter frequency) and the
+        drag pull with the boat's speed time constant τ. κ′ = s·sinc(k·LWL·|cos μ_w|/2)·ω/ω_e with
+        the signed, smoothed ω_e (|ω/ω_e| ≤ 2). `seed` starts y so that w is continuous (0) when the
+        effect is switched on.
+        """
+        a = min(dt / max(cfg.boat.stw_time_constant_s, 0.1), 1.0)
+        along = -math.cos(mu_w)
+        surge = u_total = 0.0
+        for i, (u_surface, k, omega, encounter_factor) in enumerate(orbital_components(env, self._wave_phase)):
+            u = u_surface * math.exp(-k * HULL_DEPTH) * along
+            x = k * cfg.boat.lwl * abs(along) / 2
+            length = math.sin(x) / x if x > 1e-9 else 1.0
+            kp = cfg.boat.wave_surge_factor * length * surge_ratio(omega, encounter_factor * self._omega_e_slow)
+            if seed:
+                self._surge_y[i] = -kp * u
+            self._surge_y[i] += ((1.0 - kp) * u - self._surge_y[i]) * a
+            surge += kp * u + self._surge_y[i]
+            u_total += u
+        return surge, u_total
+
+
+def orbital_on(cfg: Scenario, env: EnvironmentState) -> bool:
+    return cfg.waves.orbital and env.wave_height > 0
+
+
+def surge_ratio(omega: float, omega_e: float) -> float:
+    """ω/ω_e of the wave pressure response, limited to ±SURGE_RATIO_CAP. ω_e is signed: negative when
+    the boat overtakes the waves, which reverses the response."""
+    if abs(omega_e) * SURGE_RATIO_CAP <= omega:
+        return math.copysign(SURGE_RATIO_CAP, omega_e)
+    return omega / omega_e
+
+
+def orbital_components(env: EnvironmentState, phase: float) -> tuple[tuple[float, float, float, float], ...]:
+    """The wave components as (u, k, ω, ω_e factor): the orbital velocity at the surface in the wave
+    travel direction (A·ω·cos phase), the wavenumber, the frequency and the factor on the encounter
+    frequency. The secondary has wavenumber f·k, phase f·p + 0.7, encounter f·ω_e and its amplitude
+    from its deep-water frequency √f·ω."""
+    f = SECONDARY_FREQ
+    a = env.wave_height / 2
+    k = 2 * math.pi / env.wave_length
+    omega = 2 * math.pi / env.wave_period
+    a2, omega2 = env.wave_irregularity / f * a, math.sqrt(f) * omega
+    return (
+        (a * omega * math.cos(phase), k, omega, 1.0),
+        (a2 * omega2 * math.cos(f * phase + 0.7), f * k, omega2, f),
+    )
+
+
+def orbital_fwd(env: EnvironmentState, phase: float, mu_w: float, depth: float) -> float:
+    """Orbital water velocity (m/s) at `depth` along the course through water, forward +.
+
+    The water moves in the wave travel direction under a crest; μ_w is the direction the waves come
+    from relative to the course through water, so head seas give −u (the water moves aft).
+    """
+    along = -math.cos(mu_w)
+    return sum(u * math.exp(-k * depth) for u, k, _, _ in orbital_components(env, phase)) * along
 
 
 def leeway(heel: float, stw: float, k: float, motoring: bool) -> float:

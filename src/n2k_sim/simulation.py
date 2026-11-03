@@ -8,13 +8,13 @@ from pathlib import Path
 from typing import Any, Callable
 
 from n2k_sim import geo
-from n2k_sim.boat.model import Boat, BoatState
+from n2k_sim.boat.model import Boat, BoatState, orbital_on
 from n2k_sim.boat.tables import HeelTable, Polar
 from n2k_sim.calc.processor import Processor
 from n2k_sim.config import DATA_DIR, Scenario
 from n2k_sim.environment.model import Environment
 from n2k_sim.environment.state import EnvironmentState
-from n2k_sim.sensors.devices import SensorInput, WindDamping, read_all
+from n2k_sim.sensors.devices import PaddleWheel, SensorInput, WindDamping, read_all
 from n2k_sim.signals.catalogue import BY_NAME, Layer
 from n2k_sim.units import from_ui
 
@@ -52,6 +52,8 @@ def truth_signals(env: EnvironmentState, boat: BoatState) -> dict[str, Any]:
         "boat.awa": boat.awa,
         "boat.aws": boat.aws,
         "boat.target_stw": boat.target_stw,
+        "boat.wave_surge": boat.wave_surge,
+        "boat.orbital_fwd": boat.orbital_fwd,
     }
 
 
@@ -82,6 +84,7 @@ class Simulation:
         self.boat = Boat(self.scenario, self.polar, self.heel_table)
         self.processor = Processor(self.polar)
         self.wind_damping = WindDamping()
+        self.paddle_wheel = PaddleWheel()
         self.snapshot: Snapshot | None = None
 
     def set_polar(self, polar: Polar) -> None:
@@ -97,9 +100,11 @@ class Simulation:
         boat = self.boat.step(self.t, dt, env, cfg)
         self.env_state, self.boat_state = env, boat
         readings = read_all(SensorInput(env, boat, cfg, utc))
+        stw_local = readings["stw"]
+        readings = self.paddle_wheel.step(readings, boat.stw, orbital_on(cfg, env), dt, cfg)
         readings = self.wind_damping.step(readings, dt, cfg.sensors.wind_damping_s)
-        calc = self.processor.step(readings, dt, cfg.processor.leeway_k)
-        values = {**truth_signals(env, boat), **readings, **calc}
+        calc = self.processor.step(readings, dt, cfg.processor.leeway_k, cfg.processor.stw_damping_s)
+        values = {**truth_signals(env, boat), "boat.stw_local": stw_local, **readings, **calc}
         self.snapshot = Snapshot(self.t, utc, values, apply_overrides(values, cfg.overrides))
         return self.snapshot
 

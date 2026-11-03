@@ -42,6 +42,8 @@ class Waves(BaseModel):
     height: float = 1.0  # m, significant wave height
     period: float = 5.0  # s; wavelength follows from deep-water dispersion
     irregularity: float = 0.2
+    orbital: bool = False  # orbital water velocity moves the hull (surge) and the paddle wheel
+    follow_wind: bool = False  # True: waves come from the mean TWD (`wind.twd`), not `direction`
 
     @model_validator(mode="before")
     @classmethod
@@ -76,6 +78,8 @@ class Boat(BaseModel):
     # speed at which the sails count as fully loaded. No sail damping while motoring.
     sail_roll_damping: float = 0.35
     sail_damping_aws_ref: float = 15.0  # kn
+    lwl: float = 10.5  # m, waterline length: hull response to waves longer/shorter than the boat
+    wave_surge_factor: float = 1.0  # wave pressure force on the hull (Froude–Krylov); 0 = drag only
 
 
 class Autopilot(BaseModel):
@@ -100,6 +104,7 @@ class Gps(BaseModel):
 
 class Processor(BaseModel):
     leeway_k: float = 10.0  # K used by the instrument processor for leeway correction
+    stw_damping_s: float = 0.0  # s, first-order damping of STW before true wind and leeway (0 = none)
 
 
 class Sensors(BaseModel):
@@ -108,6 +113,11 @@ class Sensors(BaseModel):
     mast_height: float = 18.8  # m
     wind_damping_s: float = 0.0  # s, first-order damping of AWA/AWS in the wind unit (0 = none)
     invert_pitch: bool = False  # fault: the attitude sensor reports pitch with the wrong sign
+    # Paddle wheel: reads the speed relative to the local (orbiting) water at its depth.
+    paddlewheel_depth: float = 0.5  # m below the waterline
+    paddlewheel_lag_s: float = 0.0  # s, wheel inertia on the wave part (0 = none)
+    stw_average_s: float = 1.0  # s, the log averages the wave part over its update interval
+    stw_factor: float = 1.0  # fault: STW calibration error (reported STW × factor)
 
 
 DEFAULT_STATIC: dict[str, float] = {
