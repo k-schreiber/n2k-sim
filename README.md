@@ -18,6 +18,11 @@ uv venv .venv && uv pip install -p .venv -e ".[dev]"
 Open http://127.0.0.1:8080/. Point a client (e.g. NMEA Dashboard: *NMEA2000 YD RAW*) at this
 machine's IP, TCP port 2223, or listen on UDP port 2002.
 
+On the bus the simulator is one properly identified device: address claim with contention, product
+and configuration information, heartbeat, PGN lists, and instance and label changes from network
+managers such as Signal K (connect it by TCP with `ydwg02-canboatjs`; UDP is receive-only). PGNs
+follow [canboat](https://github.com/canboat/canboat). See [docs/spec/n2k-output.md](docs/spec/n2k-output.md).
+
 Options: `--scenario file.json`, `--udp-host 192.168.1.255` (subnet broadcast or unicast, e.g.
 `127.0.0.1` for an emulator), `--udp-port`, `--tcp-port`, `--seed`, `--mast-height 18.8` (masthead
 wind sensor height; 0 = no mast motion in AWA/AWS), `--wind-damping 1.0` (AWA/AWS damping, s),
@@ -45,7 +50,7 @@ only what is transmitted.
 
 ## Output
 
-~95 frames/s from one gateway source address (0x23) — 29 PGN schedules incl. 127250/127251/127257,
+~95 frames/s from one gateway source address (0x23) — 31 PGN schedules incl. 127250/127251/127257,
 128259/128267/128275, 129025/129026/129029/129539/129540, 130306 (apparent, true, ground),
 127488/127489, 127505, 127508, 1303xx environment. See [docs/spec/n2k-output.md](docs/spec/n2k-output.md).
 Encoding follows the NMEA 2000 specification ([docs/spec/pgn-reference.md](docs/spec/pgn-reference.md)).

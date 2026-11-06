@@ -36,3 +36,34 @@ class FastPacketFramer:
         seq = self._seq.get(pgn, 0)
         self._seq[pgn] = (seq + 1) & 7
         return split_fast_packet(payload, seq)
+
+
+class FastPacketAssembler:
+    """Reassembles incoming fast-packet messages per (source, PGN); drops incomplete ones.
+
+    canboatjs sends a message of exactly 8 bytes as one plain frame without the fast-packet header.
+    Its first byte is a nonzero frame index for no started message, which is how it is recognised.
+    """
+
+    def __init__(self) -> None:
+        self._open: dict[tuple[int, int], tuple[int, int, int, bytearray]] = {}
+
+    def add(self, source: int, pgn: int, data: bytes) -> bytes | None:
+        """Returns the complete message when `data` finishes one, else None."""
+        key = (source, pgn)
+        seq, index = data[0] >> 5, data[0] & 0x1F
+        if index == 0:
+            if len(data) < 2:
+                return None
+            self._open[key] = (seq, 1, data[1], bytearray(data[2:]))
+        else:
+            started = self._open.get(key)
+            if started is None or started[0] != seq or started[1] != index:
+                self._open.pop(key, None)
+                return bytes(data) if started is None and len(data) == 8 else None
+            self._open[key] = (seq, index + 1, started[2], started[3] + data[1:])
+        seq, index, length, buffer = self._open[key]
+        if len(buffer) < length:
+            return None
+        del self._open[key]
+        return bytes(buffer[:length])

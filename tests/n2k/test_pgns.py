@@ -42,11 +42,11 @@ def test_schedule():
     assert "60928" not in ids and len(default_pgns()) == len(ids)
     assert {s.pgn for s in SPECS.values() if s.fast_packet} == {127489, 128275, 129029, 129540}
     assert not SPECS["130310"].enabled and SPECS["130311"].enabled
-    assert SPECS["130306.apparent"].interval_s == 0.1 and SPECS["127258"].priority == 6
+    assert SPECS["130306.apparent"].interval_s == 0.1 and SPECS["127258"].priority == 7
     assert SPECS["129540"].interval_s == 1.0 and SPECS["130311"].interval_s == 0.5
     assert {s.sensor for s in SPECS.values()} <= {
         "gps", "compass", "wind_sensor", "speed_log", "depth_sounder", "rudder", "engine",
-        "tanks", "battery", "weather", "processor", "gateway"}
+        "tanks", "battery", "weather", "processor", "heartbeat"}
 
 
 def test_every_single_frame_payload_is_8_bytes(run, signals):

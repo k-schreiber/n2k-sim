@@ -51,7 +51,7 @@ fix it shows the ground-referenced angle as TWA until ref 4 support is added the
 | D1 | 127257 interval | 100 ms | default list says 1000 ms (NMEA2000.cpp:298) | keep 100 ms? (smoother heel/pitch display; many 9-axis sensors send faster) |
 | D2 | 130310 / 130311 interval | 2 s | 500 ms (NMEA2000.cpp:311-312) | 500 ms |
 | D3 | 129540 interval | 5 s | 1000 ms (NMEA2000.cpp:512) | 1 s |
-| D4 | 60928 | re-sent every 300 s unsolicited | sent at start-up and on ISO request (59904); we don't read requests | keep (harmless, helps clients that connect later) |
+| D4 | 60928 | re-sent every 300 s unsolicited | sent at start-up and on ISO request (59904); we don't read requests | superseded: the identity is sent every 60 s and on connect, and requests are answered ([n2k-output.md](n2k-output.md)) |
 | D5 | 127505 instances | instances repeat across fluid types (fuel 0, water 0/1, black water 0) | header doc: "best to have instance unique" | unique instances 0–3 |
 
 ### Not verifiable against the library

@@ -199,7 +199,7 @@ const environment = (() => {
 
 // ---------------------------------------------------------------- Boat
 const boat = (() => {
-  let cards = [], mode, apFields, lat, lon, polarBox, polarName = null, apCard, polarLoaded = false;
+  let cards = [], mode, apFields, lat, lon, label1, label2, polarBox, polarName = null, apCard, polarLoaded = false;
   const apDefs = [
     { key: 'heading', label: 'Heading target', min: 0, max: 360, step: 1, unit: '°' },
     { key: 'twa', label: 'TWA target (neg = port)', min: -180, max: 180, step: 1, unit: '°' },
@@ -282,6 +282,13 @@ const boat = (() => {
         { key: 'stw_factor', label: 'Fault: STW factor', min: 0.5, max: 1.5, step: 0.01, unit: '', hint: 'calibration error of the reported STW; 1 = none' },
         { key: 'invert_pitch', label: 'Fault: invert pitch sign (127257)', bool: true },
       ]);
+      const patchDevice = (key) => (v) => call('PATCH', '/api/scenario/device', { [key]: v });
+      label1 = textField({ label: 'Installation description 1', commit: patchDevice('installation_description1') });
+      label2 = textField({ label: 'Installation description 2', commit: patchDevice('installation_description2') });
+      const device = sectionCard('Bus device', 'device', [
+        { key: 'device_instance', label: 'Device instance', min: 0, max: 255, step: 1, unit: '', hint: 'changes the CAN Name; also settable from the bus (126208)' },
+        { key: 'system_instance', label: 'System instance', min: 0, max: 15, step: 1, unit: '' },
+      ], [label1.el, label2.el]);
       lat = textField({ label: 'Start latitude', type: 'number', step: 0.0001, unit: '°N', commit: () => {} });
       lon = textField({ label: 'Start longitude', type: 'number', step: 0.0001, unit: '°E', commit: () => {} });
       const pos = h('section', { class: 'card' }, h('div', { class: 'card-h' }, h('h3', { text: 'Position' })),
@@ -305,7 +312,7 @@ const boat = (() => {
         { key: 'sats_used', label: 'Satellites used', min: 0, max: 32, step: 1 },
         { key: 'sats_in_view', label: 'Satellites in view', min: 0, max: 32, step: 1 },
       ]);
-      cards = [apCard, boatCard, proc, sensors, gps];
+      cards = [apCard, boatCard, proc, sensors, device, gps];
       polarBox = h('div', { class: 'muted', text: 'Loading polar…' });
       const file = h('input', { type: 'file', accept: '.pol,.txt,.csv,text/plain', hidden: true });
       file.addEventListener('change', async () => {
@@ -316,13 +323,14 @@ const boat = (() => {
       const polar = h('section', { class: 'card wide' }, h('div', { class: 'card-h' }, h('h3', { text: 'Polar' }), h('div', { class: 'spacer' }),
         h('button', { class: 'btn', text: 'Upload .pol…', onclick: () => file.click() }), file),
       h('div', { class: 'card-b' }, polarBox));
-      root.append(h('div', { class: 'cards2' }, apCard.el, boatCard.el, pos, proc.el, sensors.el, gps.el), polar);
+      root.append(h('div', { class: 'cards2' }, apCard.el, boatCard.el, pos, proc.el, sensors.el, device.el, gps.el), polar);
     },
     enter() { loadPolar(); },
     update(st) {
       for (const c of cards) c.update(st.scenario);
       const scn = st.scenario || {};
       if (scn.autopilot) mode.set(scn.autopilot.mode);
+      if (scn.device) { label1.set(scn.device.installation_description1); label2.set(scn.device.installation_description2); }
       if (scn.boat) { lat.set(scn.boat.lat); lon.set(scn.boat.lon); if (polarLoaded && polarName && scn.boat.polar_file && polarName !== scn.boat.polar_file && !String(polarName).includes(scn.boat.polar_file)) { polarName = scn.boat.polar_file; loadPolar(); } }
     },
   };

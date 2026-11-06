@@ -16,7 +16,8 @@
 - Physically accurate hydrodynamics or aerodynamics; sensor noise, latency, calibration errors.
 - A realistic multi-device N2K network (one gateway source instead).
 - Writing to a real CAN bus (no CAN adapter support — avoids disturbing a real boat network).
-- Receiving or acting on N2K input (the TCP server ignores anything clients send).
+- Acting on N2K data from others: the TCP server only answers network management (requests, address
+  claims and commands for this device, see [n2k-output.md](n2k-output.md)); it forwards nothing.
 - AIS targets, autopilot commands, alarms, multi-boat scenarios (possible later extensions).
 - Other wire formats (Actisense, SeaSmart, NMEA 0183) — architecture keeps a seam for them.
 

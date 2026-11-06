@@ -10,12 +10,14 @@ from collections import deque
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Callable
 
 log = logging.getLogger(__name__)
 
 UDP_MAX_DATAGRAM = 1400
 UDP_FLUSH_INTERVAL = 0.05  # s
 TCP_MAX_BUFFER = 1_000_000  # bytes queued per client before it is dropped
+TCP_MAX_LINE = 1024  # bytes; a longer incoming line is discarded
 
 
 class RateMeter:
@@ -102,10 +104,18 @@ class UdpOutput:
 
 
 class TcpOutput:
-    """TCP server streaming to all connected clients; anything clients send is discarded."""
+    """TCP server streaming to all connected clients. Like a gateway it is bidirectional: every text
+    line a client sends goes to `on_line`, and `on_connect` runs when a client has connected."""
 
-    def __init__(self, host: str, port: int):
+    def __init__(
+        self,
+        host: str,
+        port: int,
+        on_line: Callable[[str], None] = lambda line: None,
+        on_connect: Callable[[], None] = lambda: None,
+    ):
         self.host, self.port = host, port
+        self._on_line, self._on_connect = on_line, on_connect
         self._server: asyncio.base_events.Server | None = None
         self._clients: set[asyncio.StreamWriter] = set()
         self._meter = RateMeter()
@@ -122,11 +132,19 @@ class TcpOutput:
     async def _handle(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         self._clients.add(writer)
         log.info("TCP client connected: %s", writer.get_extra_info("peername"))
+        pending = b""
         try:
-            while await reader.read(4096):
-                pass  # input is ignored
+            self._on_connect()
+            while data := await reader.read(4096):
+                *lines, pending = (pending + data).split(b"\n")
+                if len(pending) > TCP_MAX_LINE:
+                    pending = b""
+                for line in lines:
+                    self._on_line(line.decode("ascii", "replace"))
         except (ConnectionError, asyncio.CancelledError):
             pass
+        except Exception:  # a bad client must not take the server down
+            log.exception("TCP client input failed")
         finally:
             self._drop(writer)
 

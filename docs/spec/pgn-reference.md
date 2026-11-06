@@ -32,7 +32,7 @@ id = prio<<26 | DP<<24 | PF<<16 | PS<<8 | SA
 ```
 
 Example: PGN 130306 (0x1FD02), priority 2, source 0x23 → `0x09FD0223`.
-All PGNs used here are PDU2 except 60928 (PF 0xEE, PDU1).
+All PGNs used here are PDU2 except 59392, 59904, 60928, 126208 and 126464 (PF < 240, PDU1: addressed).
 
 YD RAW line (one CAN frame): `hh:mm:ss.mmm R XXXXXXXX B0 B1 … Bn\r\n`
 
@@ -59,7 +59,7 @@ YD RAW line (one CAN frame): `hh:mm:ss.mmm R XXXXXXXX B0 B1 … Bn\r\n`
 | 0–3 | u32: bits 0–20 unique number, bits 21–31 manufacturer code |
 | 4 | bits 0–2 device instance lower, bits 3–7 device instance upper |
 | 5 | device function |
-| 6 | bit 0 reserved (1), bits 1–7 device class |
+| 6 | bit 0 spare (0), bits 1–7 device class |
 | 7 | bits 0–3 system instance, bits 4–6 industry group (4 = marine), bit 7 arbitrary address capable |
 
 ### 126992 System Time — single

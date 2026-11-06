@@ -78,7 +78,7 @@ each signal's UI unit (`units.UI_UNITS`). JSON everywhere.
 
 | Method | Path | Body | Purpose |
 |---|---|---|---|
-| PATCH | `/api/scenario/{section}` | partial object | sections: wind, current, waves, seabed, boat, autopilot, gps, processor |
+| PATCH | `/api/scenario/{section}` | partial object | sections: wind, current, waves, seabed, boat, autopilot, gps, processor, sensors, device |
 | PATCH | `/api/static` | `{"engine.rpm": 1800, ...}` | static signal values (UI units) |
 | PUT | `/api/overrides/{name}` | `{"value": 25}` | set override (UI units) |
 | DELETE | `/api/overrides/{name}` | – | clear override |

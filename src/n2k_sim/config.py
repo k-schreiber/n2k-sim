@@ -162,6 +162,20 @@ class PgnSetting(BaseModel):
     interval_s: float | None = None  # None = default from the PGN table
 
 
+class Device(BaseModel):
+    """Identity on the bus: ISO NAME (60928), Product (126996) and Configuration Information (126998)."""
+
+    unique_number: int | None = Field(default=None, ge=0, le=0x1FFFFE)  # None = from the host name
+    manufacturer_code: int = Field(default=2046, ge=0, le=2046)  # 2046 = unassigned, no real brand
+    device_instance: int = Field(default=0, ge=0, le=255)  # upper 5 and lower 3 bits of 60928
+    system_instance: int = Field(default=0, ge=0, le=15)
+    product_code: int = Field(default=2000, ge=1, le=65533)
+    product_model: str = "n2k-sim"
+    product_version: str = "Simulator"
+    installation_description1: str = "Simulator"
+    installation_description2: str = ""
+
+
 class Output(BaseModel):
     source: int = 0x23
     udp: Transport = Field(default_factory=lambda: Transport(host="255.255.255.255", port=2002))
@@ -181,6 +195,7 @@ class Scenario(BaseModel):
     gps: Gps = Field(default_factory=Gps)
     processor: Processor = Field(default_factory=Processor)
     sensors: Sensors = Field(default_factory=Sensors)
+    device: Device = Field(default_factory=Device)
     static: dict[str, float] = Field(default_factory=lambda: dict(DEFAULT_STATIC))
     overrides: dict[str, float] = Field(default_factory=dict)  # signal name -> UI-unit value
     output: Output = Field(default_factory=Output)
@@ -193,4 +208,4 @@ class Scenario(BaseModel):
         Path(path).write_text(self.model_dump_json(indent=2))
 
 
-SECTIONS = ("wind", "current", "waves", "seabed", "boat", "autopilot", "gps", "processor", "sensors")
+SECTIONS = ("wind", "current", "waves", "seabed", "boat", "autopilot", "gps", "processor", "sensors", "device")

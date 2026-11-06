@@ -12,8 +12,9 @@ from typing import Any
 
 from n2k_sim.boat.tables import Polar
 from n2k_sim.config import SECTIONS, PgnSetting, Scenario
-from n2k_sim.formats.ydraw import format_frame
+from n2k_sim.formats.ydraw import format_frame, parse_client_line
 from n2k_sim.n2k.gateway import Gateway
+from n2k_sim.n2k.types import CanFrame
 from n2k_sim.signals.catalogue import BY_NAME, SIGNALS, Layer
 from n2k_sim.simulation import POLAR_DIR, Simulation, load_polar_file
 from n2k_sim.transport.net import Recorder, TcpOutput, UdpOutput
@@ -31,7 +32,7 @@ class Runtime:
     def __init__(self, scenario: Scenario):
         self.scenario = scenario
         self.sim = Simulation(scenario)
-        self.gateway = Gateway(scenario.output.source, scenario.output.pgns)
+        self.gateway = Gateway(scenario.output.source, scenario.output.pgns, scenario.device)
         self.running = True
         self.udp: UdpOutput | None = None
         self.tcp: TcpOutput | None = None
@@ -61,7 +62,9 @@ class Runtime:
             if t:
                 await t.stop()
         self.udp = UdpOutput(out.udp.host, out.udp.port) if out.udp.enabled else None
-        self.tcp = TcpOutput(out.tcp.host, out.tcp.port) if out.tcp.enabled else None
+        self.tcp = None
+        if out.tcp.enabled:
+            self.tcp = TcpOutput(out.tcp.host, out.tcp.port, self._on_client_line, self._on_client_connect)
         for t in (self.udp, self.tcp):
             if t:
                 await t.start()
@@ -87,8 +90,20 @@ class Runtime:
             await asyncio.sleep(LOOP_INTERVAL)
 
     def _emit(self, now: float) -> None:
-        snap = self.sim.snapshot
-        frames = self.gateway.poll(now, snap.sent)
+        self._send(self.gateway.poll(now, self.sim.snapshot.sent), now)
+
+    def _on_client_connect(self) -> None:
+        """A device joining the bus learns who is there without having to ask."""
+        now = time.time()
+        self._send(self.gateway.announce(now), now)
+
+    def _on_client_line(self, line: str) -> None:
+        frame = parse_client_line(line)
+        if frame is not None:
+            now = time.time()
+            self._send(self.gateway.receive(*frame, now), now)
+
+    def _send(self, frames: list[CanFrame], now: float) -> None:
         if not frames:
             return
         lines = [format_frame(f) for f in frames]
@@ -165,7 +180,7 @@ class Runtime:
             )
         return {
             "frames_per_s": round(total, 1),
-            "source": out.source,
+            "source": self.gateway.source,
             "udp": transport(out.udp, self.udp),
             "tcp": transport(out.tcp, self.tcp),
             "recorder": {"enabled": out.recorder, "path": str(self.recorder.path) if self.recorder.path else None},
@@ -218,6 +233,8 @@ class Runtime:
         if section == "boat" and merged.polar_file != model.polar_file:
             self.sim.set_polar(load_polar_file(merged.polar_file))
         setattr(self.scenario, section, merged)
+        if section == "device":
+            self.gateway.device.cfg = merged
         if section == "boat" and ("lat" in patch or "lon" in patch):
             self.sim.boat.teleport(merged.lat, merged.lon)
 
@@ -276,7 +293,7 @@ class Runtime:
         self.scenario = scenario
         self.sim = Simulation(scenario)
         self.sim.step(SIM_DT)
-        self.gateway = Gateway(scenario.output.source, scenario.output.pgns)
+        self.gateway = Gateway(scenario.output.source, scenario.output.pgns, scenario.device)
         await self.restart_transports()
 
     def reset(self) -> None:

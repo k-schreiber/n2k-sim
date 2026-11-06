@@ -1,4 +1,4 @@
-"""PGN encoders and the default transmission schedule."""
+"""PGN encoders and the default transmission schedule; priorities as in canboat (docs/canboat.json)."""
 
 from __future__ import annotations
 
@@ -11,14 +11,15 @@ def _p(pgn, name, interval, prio, enc, sensor, fast=False, enabled=True, key="")
 
 
 def default_pgns() -> list[PgnSpec]:
-    """The full default schedule (60928 is sent by the gateway itself)."""
+    """The full default schedule (identity and protocol PGNs are sent by n2k/device.py)."""
     return [
         _p(126992, "System Time", 1.0, 3, system.encode_126992, "gps"),
+        _p(126993, "Heartbeat", 60.0, 7, system.encode_126993, "heartbeat"),
         _p(127245, "Rudder", 0.1, 2, steering.encode_127245, "rudder"),
         _p(127250, "Vessel Heading", 0.1, 2, compass.encode_127250, "compass"),
         _p(127251, "Rate of Turn", 0.1, 2, compass.encode_127251, "compass"),
         _p(127257, "Attitude", 0.1, 3, compass.encode_127257, "compass"),
-        _p(127258, "Magnetic Variation", 1.0, 6, gps.encode_127258, "gps"),
+        _p(127258, "Magnetic Variation", 1.0, 7, gps.encode_127258, "gps"),
         _p(127488, "Engine Rapid", 0.1, 2, engine.encode_127488, "engine"),
         _p(127489, "Engine Dynamic", 0.5, 2, engine.encode_127489, "engine", fast=True),
         _p(127505, "Fluid Level", 2.5, 6, tanks.encode_127505, "tanks"),

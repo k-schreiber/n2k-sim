@@ -23,6 +23,20 @@ def frames_to_bytes(frames: Iterable[CanFrame]) -> bytes:
     return "".join(format_frame(f) for f in frames).encode("ascii")
 
 
+def parse_client_line(line: str) -> tuple[int, bytes] | None:
+    """Parses what a client sends: `XXXXXXXX B0 B1 ...` or a full line with time and direction.
+    Returns (can_id, data), or None for anything else (gateways also get text commands)."""
+    tokens = line.split()
+    if len(tokens) >= 3 and tokens[1] in ("R", "T"):
+        tokens = tokens[2:]
+    if len(tokens) < 2 or len(tokens) > 9 or len(tokens[0]) != 8 or any(len(t) != 2 for t in tokens[1:]):
+        return None
+    try:
+        return int(tokens[0], 16), bytes(int(t, 16) for t in tokens[1:])
+    except ValueError:
+        return None
+
+
 def parse_line(line: str) -> tuple[int, bytes]:
     """Parses one YD RAW line into (can_id, data); raises ValueError on a bad line."""
     tokens = line.rstrip("\r\n").split(" ")
